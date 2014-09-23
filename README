@@ -51,6 +51,9 @@ $
 Check to make sure nvidia libs are setup ok:
 $ nvidia-smi 
 
+Switch to correct directory
+$ cd nvidia_gpu_cula_code 
+
 Source paths to cuda/cula
 $ source setup_paths.sh
 
