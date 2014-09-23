@@ -1,0 +1,76 @@
+Implementations of fast randomized algorithms for computing the approximate low rank SVD of a matrix. 
+A \approx U_k \Sigma_k V^T_k
+See the included pdf file (in description/ folder) for a more detailed description.
+There are three codes: for single processor (with GNU GSL), multiprocessor 
+(with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
+
+Written by Sergey Voronin, 2014
+Tested with icc 14.03, cuda/cula 6.0
+
+============ summary of installation and usage ==============
+
+One must install the GSL development libraries, intel mkl (and the intel C compiler), 
+and the CULA Dense packages. Please refer to their responding documentations.
+http://www.gnu.org/software/gsl/
+https://software.intel.com/en-us/intel-mkl
+http://www.culatools.com/dense/
+
+Each implementation resides in its own subfolder with a compile.sh file. After 
+necessary paths (PATH variable, LD_LIBRARY_PATH) are set for referencing 
+gsl, mkl, and cuda/cula, this file 
+should be modified to reflect any local system changes and executed to yield the 
+driver executable in each case. Paths for mkl are usually set via:
+$ source /opt/intel/bin/compilervars.sh intel64
+For cuda/cula, source the script nvidia_gpu_cula_code/setup_paths.sh after checking 
+that the paths are correct for your system.  
+
+In order to make a test matrix, use the provide make_matrix_binary.m script which can be run 
+from Octave or Matlab. Note that this script writes a binary matrix file.
+
+Once the matrix is made one can use any of the drivers to compute the low 
+rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
+
+One can call either version I,II,III of the low rank SVD code with each program.
+Single core code currently supports only I and II.
+
+Notice that for the multiprocessor OpenMP based code, one can control the number of 
+threads used via an environmental variable. For instance, in bash type:
+export OMP_NUM_THREADS=6
+to use 6 threads. You should use as many threads as there are physical cores for 
+best results, but the optimal configuration differs for different systems.
+
+Example run with GPU code
+
+First, make the matrix
+$ octave
+> more off;
+> make_matrix_binary 
+> ls data/A_mat1.bin
+$
+
+Check to make sure nvidia libs are setup ok:
+$ nvidia-smi 
+
+Source paths to cuda/cula
+$ source setup_paths.sh
+
+Compile
+$./compile.sh
+
+Run:
+$./driver_gpu_nvidia_cula
+
+Initializing CULA
+culaVersion is 18000
+loading matrix from ../data/A_mat1.bin
+initializing M of size 2000 by 3000
+done..
+sizes of M are 2000 by 3000
+calling random SVD with k = 500
+.........
+elapsed time: about 2 seconds
+normM = 104.412691 ; normU = 22.360680 ; normS = 103.888908 ; normV = 22.360680 ; normP = 103.888908
+percent_error between M and U S V^T = 10.003883
+Shutting down CULA
+$
+
