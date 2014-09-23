@@ -5,7 +5,7 @@ There are three codes: for single processor (with GNU GSL), multiprocessor
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 
 Written by Sergey Voronin, 2014
-Tested with icc 14.03, cuda/cula 6.0
+Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
 
 ============ summary of installation and usage ==============
 
