@@ -1,5 +1,4 @@
-/* randomized low rank SVD code written with GSL library 
-Sergey Voronin, April 2014 */
+/* single core code using GSL library */
 #include "low_rank_svd_algorithms_gsl.h"
 
 

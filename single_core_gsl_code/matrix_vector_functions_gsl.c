@@ -1,5 +1,3 @@
-/* randomized low rank SVD code written with GSL library 
-Sergey Voronin, April 2014 */
 #include "matrix_vector_functions_gsl.h"
 
 

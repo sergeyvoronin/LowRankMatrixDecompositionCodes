@@ -1,5 +1,4 @@
-/* randomized low rank SVD code driver written with Intel MKL library 
-Sergey Voronin, April 2014 */
+/* Intel MKL code with OpenMP */
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
 #define max(x,y) (((x) > (y)) ? (x) : (y))
