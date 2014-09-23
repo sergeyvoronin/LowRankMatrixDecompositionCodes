@@ -30,7 +30,7 @@ from Octave or Matlab. Note that this script writes a binary matrix file.
 Once the matrix is made one can use any of the drivers to compute the low 
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
 
-One can call either version I,II,III of the low rank SVD code with each program.
+One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
 Single core code currently supports only I and II.
 
 Notice that for the multiprocessor OpenMP based code, one can control the number of 
