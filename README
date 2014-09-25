@@ -1,5 +1,6 @@
 Implementations of fast randomized algorithms for computing the approximate low rank SVD of a matrix. 
 A \approx U_k \Sigma_k V^T_k
+where A is mxn, U_k is mxk, \Sigma_k is kxk, and V_k is nxk, with k << min(m,n).
 See the included pdf file (in description/ folder) for a more detailed description.
 There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
