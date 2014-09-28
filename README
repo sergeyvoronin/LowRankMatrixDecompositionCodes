@@ -11,9 +11,11 @@ Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
 ============ summary of installation and usage ==============
 
 One must install the GSL development libraries, intel mkl (and the intel C compiler), 
-and the CULA Dense packages. Please refer to their responding documentations.
+NVIDA CUDA libraries and the CULA Dense packages. 
+Please refer to their corresponding documentations.
 http://www.gnu.org/software/gsl/
 https://software.intel.com/en-us/intel-mkl
+https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
 Each implementation resides in its own subfolder with a compile.sh file. After 
