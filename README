@@ -4,8 +4,9 @@ where A is mxn, U_k is mxk, \Sigma_k is kxk, and V_k is nxk, with k << min(m,n).
 See the included pdf file (in description/ folder) for a more detailed description.
 There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
+A simple implementation in Octave is also provided for illustration purposes.
 
-Written by Sergey Voronin, 2014
+Written by Sergey Voronin, 2014-2015
 Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
 
 ============ summary of installation and usage ==============
@@ -18,7 +19,8 @@ https://software.intel.com/en-us/intel-mkl
 https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
-Each implementation resides in its own subfolder with a compile.sh file. After 
+For simple illustration of the randomized SVD algorithms, see the Octave implementation.
+Each C implementation resides in its own subfolder with a compile.sh file. After 
 necessary paths (PATH variable, LD_LIBRARY_PATH) are set for referencing 
 gsl, mkl, and cuda/cula, this file 
 should be modified to reflect any local system changes and executed to yield the 
