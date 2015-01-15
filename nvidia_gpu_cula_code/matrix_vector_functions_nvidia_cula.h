@@ -94,6 +94,8 @@ nnz (double)
 */
 mat * matrix_load_from_binary_file(char *fname);
 
+/* write matrix to binary file */
+void matrix_write_to_binary_file(mat *M, char *fname);
 
 
 /* load vector from file 

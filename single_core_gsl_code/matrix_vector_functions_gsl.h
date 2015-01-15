@@ -45,6 +45,7 @@ nnz (double)
 gsl_matrix * matrix_load_from_binary_file(char *fname);
 
 
+void matrix_write_to_binary_file(gsl_matrix *M, char *fname);
 
 
 /* load vector from file 

@@ -52,6 +52,9 @@ double vector_get_element(vec *v, int row_num);
 /* load matrix from binary file */
 mat * matrix_load_from_binary_file(char *fname);
 
+/* write matrix to binary file */
+void matrix_write_to_binary_file(mat *M, char *fname);
+
 
 void vector_set_data(vec *v, double *data);
 

@@ -262,8 +262,6 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat *U, mat *S, mat *
             QR_factorization_getQ(Y, Yorth);
             printf("Z = M'*Yorth..\n");
             matrix_transpose_matrix_mult(M,Yorth,Z);
-            //free(Yorth->d);
-            //Yorth = matrix_new(m,k);
         }
         else{
             printf("Z = M'*Y..\n");
@@ -275,15 +273,9 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat *U, mat *S, mat *
             printf("orthogonalize Z..\n");
             QR_factorization_getQ(Z, Zorth);
             printf("Y = M*Zorth..\n");
-            //free(Y->d);
-            //Y = matrix_new(m,k);
             matrix_matrix_mult(M,Zorth,Y);
-            //free(Zorth->d);
-            //Zorth = matrix_new(n,k);
         }
         else{
-            //free(Y->d);
-            //Y = matrix_new(m,k);
             printf("Y = M*Z..\n");
             matrix_matrix_mult(M,Z,Y);
         }

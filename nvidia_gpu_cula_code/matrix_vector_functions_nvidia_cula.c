@@ -212,6 +212,36 @@ mat * matrix_load_from_binary_file(char *fname){
 }
 
 
+/* write matrix to binary file 
+ * the nonzeros are in order of double loop over rows and columns
+format:
+num_rows (int) 
+num_columns (int)
+nnz (double)
+...
+nnz (double)
+*/
+void matrix_write_to_binary_file(mat *M, char *fname){
+    int i, j, num_rows, num_columns, row_num, col_num;
+    double nnz_val;
+    size_t one = 1;
+    FILE *fp;
+    num_rows = M->nrows; num_columns = M->ncols;
+    
+    fp = fopen(fname,"w");
+    fwrite(&num_rows,sizeof(int),one,fp); //write m
+    fwrite(&num_columns,sizeof(int),one,fp); //write n
+
+    // write the elements
+    for(i=0; i<num_rows; i++){
+        for(j=0; j<num_columns; j++){
+            nnz_val = matrix_get_element(M,i,j);
+            fwrite(&nnz_val,sizeof(double),one,fp); //write nnz
+        }
+    }
+    fclose(fp);
+}
+
 
 
 /* load vector from file 

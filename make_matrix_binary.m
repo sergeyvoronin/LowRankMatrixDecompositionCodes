@@ -1,4 +1,4 @@
-% make an ill conditioned matrix and save to disk in binary format 
+% make a matrix with rapdily decaying singular values and save to disk in binary format 
 more off;
 
 m = 2000;

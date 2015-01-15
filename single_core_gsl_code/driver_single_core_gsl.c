@@ -27,7 +27,8 @@ int main (void)
     printf("calling random SVD with k = %d..\n", k);
     time(&start_time);
     //randomized_low_rank_svd1(M, k, U, S, V);
-    randomized_low_rank_svd2(M, k, U, S, V);
+    //randomized_low_rank_svd2(M, k, U, S, V);
+    randomized_low_rank_svd3(M, k, 3, 1, U, S, V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
@@ -46,6 +47,13 @@ int main (void)
     // calculate percent error
     percent_error = get_percent_error_between_two_mats(M,P);
     printf("percent_error between M and U S V^T = %f\n", percent_error);
+
+    // write to disk
+    printf("writing results to disk..\n");
+    matrix_write_to_binary_file(U, "../data/output/single_core/U.bin");
+    matrix_write_to_binary_file(S, "../data/output/single_core/S.bin");
+    matrix_write_to_binary_file(V, "../data/output/single_core/V.bin");
+    printf("finished\n");
 
     // free matrices
     gsl_matrix_free(M);
