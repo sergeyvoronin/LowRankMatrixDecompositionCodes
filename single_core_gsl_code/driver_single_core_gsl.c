@@ -7,10 +7,12 @@ int main (void)
     int i, j, m, n, k;
     double percent_error, normM, normU, normS, normV, normP;
     time_t start_time, end_time;
-    char *mfile = "../data/A_mat1.bin";
+    //char *mfile = "../data/A_mat1.bin";
+    char *mfile = "../data/A_mat_2kx4k.bin";
 
     // low rank svd rank
-    k = 500;
+    k = 300;
+    //k = 500;
 
     // load matrix
     printf("loading matrix from %s\n", mfile);
@@ -27,8 +29,8 @@ int main (void)
     printf("calling random SVD with k = %d..\n", k);
     time(&start_time);
     //randomized_low_rank_svd1(M, k, U, S, V);
-    //randomized_low_rank_svd2(M, k, U, S, V);
-    randomized_low_rank_svd3(M, k, 3, 1, U, S, V);
+    randomized_low_rank_svd2(M, k, U, S, V);
+    //randomized_low_rank_svd3(M, k, 3, 1, U, S, V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
@@ -49,11 +51,11 @@ int main (void)
     printf("percent_error between M and U S V^T = %f\n", percent_error);
 
     // write to disk
-    printf("writing results to disk..\n");
+    /*printf("writing results to disk..\n");
     matrix_write_to_binary_file(U, "../data/output/single_core/U.bin");
     matrix_write_to_binary_file(S, "../data/output/single_core/S.bin");
     matrix_write_to_binary_file(V, "../data/output/single_core/V.bin");
-    printf("finished\n");
+    printf("finished\n");*/
 
     // free matrices
     gsl_matrix_free(M);

@@ -4,6 +4,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_eigen.h>
+#include <gsl/gsl_rng.h>
 
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
@@ -61,9 +62,9 @@ gsl_vector * vector_load_from_file(char *fname);
 
 
 /* build up a random matrix R */
+void initialize_random_matrix_old(gsl_matrix *M);
+
 void initialize_random_matrix(gsl_matrix *M);
-
-
 
 /*
 % project v in direction of u

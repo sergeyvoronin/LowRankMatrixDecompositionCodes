@@ -178,7 +178,7 @@ gsl_vector * vector_load_from_file(char *fname){
 
 
 /* build up a random matrix R */
-void initialize_random_matrix(gsl_matrix *M){
+void initialize_random_matrix_old(gsl_matrix *M){
     int i,j,m,n;
     double nnz_val;
     m = M->size1;
@@ -193,6 +193,32 @@ void initialize_random_matrix(gsl_matrix *M){
             gsl_matrix_set(M, i, j, ((double) rand() / (RAND_MAX)));
         }
     }
+}
+
+
+/* build up a random matrix R */
+void initialize_random_matrix(gsl_matrix *M){
+    int i,j,m,n;
+    double nnz_val;
+    const gsl_rng_type * T;
+    gsl_rng * r;
+    gsl_rng_env_setup();
+    
+    T = gsl_rng_default;
+    r = gsl_rng_alloc(T);
+    gsl_rng_set (r, time(NULL));
+
+    m = M->size1;
+    n = M->size2;
+
+    // set random elements
+    for(i=0; i<m; i++){
+        for(j=0; j<n; j++){
+            gsl_matrix_set(M, i, j, gsl_rng_uniform (r));
+        }
+    }
+
+    gsl_rng_free (r);
 }
 
 
