@@ -1,7 +1,7 @@
 % read matrix from bin file
 function M = read_matrix_binary(bin_file)
 
-% read file
+% write to files
 fprintf('reading matrix from %s\n', bin_file);
 fp = fopen(bin_file,'r');
 m = fread(fp,1,'int32');

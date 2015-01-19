@@ -2,9 +2,9 @@
 more off;
 
 m = 2000;
-n = 3000;
-bin_file = 'data/A_mat1.bin'
-mat_file = 'data/A_mat1.mat'
+n = 4000;
+bin_file = 'data/A_mat_2kx4k.bin'
+mat_file = 'data/A_mat_2kx4k.mat'
  
 
 fprintf('making matrix..\n');
