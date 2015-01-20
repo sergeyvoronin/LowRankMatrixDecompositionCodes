@@ -49,8 +49,8 @@ Example run with GPU code
 First, make the matrix
 $ octave
 > more off;
-> make_matrix_binary 
-> ls data/A_mat1.bin
+> make_matrix_binary2 
+> ls data/A_mat_6kx12k.bin
 $
 
 Check to make sure nvidia libs are setup ok:
@@ -67,18 +67,15 @@ $./compile.sh
 
 Run:
 $./driver_gpu_nvidia_cula
-
 Initializing CULA
 culaVersion is 18000
-loading matrix from ../data/A_mat1.bin
-initializing M of size 2000 by 3000
+loading matrix from ../data/A_mat_6kx12k.bin
+initializing M of size 6000 by 12000
 done..
-sizes of M are 2000 by 3000
-calling random SVD with k = 500
+sizes of M are 6000 by 12000
+calling random SVD with k = 1000
 .........
-elapsed time: about 2 seconds
-normM = 104.412691 ; normU = 22.360680 ; normS = 103.888908 ; normV = 22.360680 ; normP = 103.888908
-percent_error between M and U S V^T = 10.003883
-Shutting down CULA
+elapsed time: about 13 seconds
+normM = 180.600893 ; normU = 31.622777 ; normS = 176.342348 ; normV = 31.622777 ; normP = 176.342348
+percent_error between M and U S V^T = 21.587897
 $
-

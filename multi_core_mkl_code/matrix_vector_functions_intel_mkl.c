@@ -48,6 +48,7 @@ void matrix_set_element(mat *M, int row_num, int col_num, double val){
     M->d[col_num*(M->nrows) + row_num] = val;
 }
 
+// column major format
 double matrix_get_element(mat *M, int row_num, int col_num){
     //return M->d[row_num*(M->ncols) + col_num];
     return M->d[col_num*(M->nrows) + row_num];
