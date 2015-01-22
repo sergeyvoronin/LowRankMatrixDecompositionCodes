@@ -12,7 +12,7 @@ function [U,Sigma,V] = rsvd_version2(A,k)
     %Bt = B'; % n \times k
     Bt = A'*Q;
 
-    [Qhat,Rhat] = qr(Bt,'0');
+    [Qhat,Rhat] = qr(Bt,0);
 
     % Rhat is k \times k
     whos Qhat Rhat

@@ -15,12 +15,12 @@ else
    [V, temp] = qr(randn(n,m),0);
 end
 if p>1
-    S = logspace(1,-5,p);
+    S = logspace(0,-5,p);
 else
     S = [1];
 end
 S = diag(S);
 A = U*S*V';
 
-save('data/A_mat2.mat','A');
+save('data/A_mat2.mat','A','S');
 
