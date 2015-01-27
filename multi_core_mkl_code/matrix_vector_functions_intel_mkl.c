@@ -48,7 +48,6 @@ void matrix_set_element(mat *M, int row_num, int col_num, double val){
     M->d[col_num*(M->nrows) + row_num] = val;
 }
 
-// column major format
 double matrix_get_element(mat *M, int row_num, int col_num){
     //return M->d[row_num*(M->ncols) + col_num];
     return M->d[col_num*(M->nrows) + row_num];
@@ -943,5 +942,69 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 
     // form P = U*S*V^T
     matrix_matrix_mult(U,SVt,P);
+}
+
+
+void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *estimated_rank){
+    int m,n,i,j,ind,maxdim;
+    double vec_norm;
+    mat *RN,*Y,*Qbig,*Qsmall;
+    vec *vi,*vj,*p,*p1;
+    m = M->nrows;
+    n = M->ncols;
+    maxdim = round(min(m,n)*frac_of_max_rank);
+
+    Y = matrix_new(n,maxdim);
+    Y = matrix_new(n,maxdim);
+    Qbig = matrix_new(m,maxdim);
+    vi = vector_new(m);
+    vj = vector_new(m);
+    p = vector_new(m);
+    p1 = vector_new(m);
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = matrix_new(n, maxdim);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    printf("form Y: %d x %d..\n",m,maxdim);
+    Y = matrix_new(m, maxdim);
+    matrix_matrix_mult(M, RN, Y);
+
+    // estimate rank k and build Q from Y
+    printf("form Qbig..\n");
+    Qbig = matrix_new(m, maxdim);
+
+    matrix_copy(Qbig, Y);
+
+    printf("estimate rank with TOL = %f..\n", TOL);
+    *estimated_rank = maxdim;
+    //for(ind=0; ind<num_ortos; ind++){
+    int forbreak = 0;
+    for(j=0; !forbreak && j<maxdim; j++){
+        matrix_get_col(Qbig, j, vj);
+        for(i=0; i<j; i++){
+            matrix_get_col(Qbig, i, vi);
+            project_vector(vj, vi, p);
+            vector_sub(vj, p);
+            if(vector_get2norm(p) < TOL && vector_get2norm(p1) < TOL){
+                *estimated_rank = j;
+                forbreak = 1;
+                break;
+            }
+            vector_copy(p1,p);
+        }
+        vec_norm = vector_get2norm(vj);
+        vector_scale(vj, 1.0/vec_norm);
+        matrix_set_col(Qbig, j, vj);
+    }
+    //}
+
+    printf("estimated rank = %d\n", *estimated_rank);
+    Qsmall = matrix_new(m, *estimated_rank);
+    *Q = matrix_new(m, *estimated_rank);
+    matrix_copy_first_columns(Qsmall, Qbig);
+    QR_factorization_getQ(Qsmall, *Q);
 }
 

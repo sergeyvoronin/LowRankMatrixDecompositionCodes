@@ -266,6 +266,9 @@ void compact_QR_factorization(mat *M, mat *Q, mat *R);
 M is mxn ; Q is mxn ; R is not computed */ 
 void QR_factorization_getQ(mat *M, mat *Q);
 
+
+void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *estimated_rank);
+
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
 

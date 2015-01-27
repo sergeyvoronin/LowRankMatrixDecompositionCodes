@@ -11,7 +11,7 @@ int main()
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat1.bin";
+    char *M_file = "../data/A_mat_6kx12k.bin";
 
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
@@ -20,16 +20,17 @@ int main()
     printf("sizes of M are %d by %d\n", m, n);
 
     // now test low rank SVD of M..
-    k = 400;
+    k = 1000;
     /*U = matrix_new(m,k);
     S = matrix_new(k,k);
     V = matrix_new(n,k);*/
     
     printf("calling random SVD with k = %d\n", k);
     time(&start_time);
-    //randomized_low_rank_svd1(M, k, U, S, V);
+    //randomized_low_rank_svd1(M, k, &U, &S, &V);
     //randomized_low_rank_svd2(M, k, &U, &S, &V);
-    randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
+    //randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
+    randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
