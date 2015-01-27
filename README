@@ -4,7 +4,7 @@ where A is mxn, U_k is mxk, \Sigma_k is kxk, and V_k is nxk, with k << min(m,n).
 See the included pdf file (in description/ folder) for a more detailed description.
 There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
-A simple implementation in Octave is also provided for illustration purposes.
+A simple implementation in Matlab (or Octave) is also provided for illustration purposes.
 
 Written by Sergey Voronin, 2014-2015
 Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
@@ -36,7 +36,7 @@ Once the matrix is made one can use any of the drivers to compute the low
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
 
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
-Single core code currently supports only I and II.
+The MKL code also has some autorank functionality (in development).
 
 Notice that for the multiprocessor OpenMP based code, one can control the number of 
 threads used via an environmental variable. For instance, in bash type:
@@ -79,3 +79,4 @@ elapsed time: about 13 seconds
 normM = 180.600893 ; normU = 31.622777 ; normS = 176.342348 ; normV = 31.622777 ; normP = 176.342348
 percent_error between M and U S V^T = 21.587897
 $
+
