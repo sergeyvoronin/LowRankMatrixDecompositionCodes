@@ -73,7 +73,7 @@ loading matrix from ../data/A_mat_6kx12k.bin
 initializing M of size 6000 by 12000
 done..
 sizes of M are 6000 by 12000
-calling random SVD with k = 1000
+calling random SVD version 3 with k = 1000
 .........
 elapsed time: about 13 seconds
 normM = 180.600893 ; normU = 31.622777 ; normS = 176.342348 ; normV = 31.622777 ; normP = 176.342348

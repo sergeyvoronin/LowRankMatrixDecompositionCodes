@@ -6,7 +6,7 @@ function [U,Sigma,V] = rsvd_version2(A,k)
     R = randn(n,k);
     Y = A*R; % m \times n * n \times k = m \times k
 
-    Q = orth(Y); % m \times k
+    [Q,~] = qr(Y,0); % m \times k
 
     %B = Q'*A; % k \times m * m \times n = k \times n
     %Bt = B'; % n \times k
