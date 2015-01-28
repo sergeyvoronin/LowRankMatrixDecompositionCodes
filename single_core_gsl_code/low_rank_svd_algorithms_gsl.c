@@ -3,10 +3,15 @@
 
 
 /* computes the approximate low rank SVD of rank k of matrix M using BBt version */
-void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S, gsl_matrix *V){
+void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix **S, gsl_matrix **V){
     int i,j,m,n;
     double val;
     m = M->size1; n = M->size2;
+
+    // setup mats
+    *U = gsl_matrix_calloc(m,k);
+    *S = gsl_matrix_calloc(k,k);
+    *V = gsl_matrix_calloc(n,k);
 
     // build random matrix
     printf("form RN..\n");
@@ -49,12 +54,12 @@ void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S
     for(i=0; i<k; i++){
         gsl_vector_set(singvals,i,sqrt(gsl_vector_get(evals,i)));
     }
-    build_diagonal_matrix(singvals, k, S);
+    build_diagonal_matrix(singvals, k, *S);
     
 
     // compute U = Q*Uhat mxk * kxk = mxk  
     printf("form U..\n");
-    matrix_matrix_mult(Q,Uhat,U);
+    matrix_matrix_mult(Q,Uhat,*U);
 
 
     // compute nxk V 
@@ -62,9 +67,9 @@ void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S
     printf("form V..\n");
     gsl_matrix *Sinv = gsl_matrix_alloc(k,k);
     gsl_matrix *UhatSinv = gsl_matrix_alloc(k,k);
-    invert_diagonal_matrix(Sinv,S);
+    invert_diagonal_matrix(Sinv,*S);
     matrix_matrix_mult(Uhat,Sinv,UhatSinv);
-    matrix_matrix_mult(Bt,UhatSinv,V);
+    matrix_matrix_mult(Bt,UhatSinv,*V);
 
     // clean up
     gsl_matrix_free(RN);
@@ -78,10 +83,15 @@ void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S
 
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR method */
-void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S, gsl_matrix *V){
+void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix **S, gsl_matrix **V){
     int i,j,m,n;
     double val;
     m = M->size1; n = M->size2;
+
+    // setup mats
+    *U = gsl_matrix_calloc(m,k);
+    *S = gsl_matrix_calloc(k,k);
+    *V = gsl_matrix_calloc(n,k);
 
     // build random matrix
     printf("form RN..\n");
@@ -120,15 +130,15 @@ void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S
 
     // record singular values
     printf("form S..\n");
-    build_diagonal_matrix(Sigmahat, k, S);
+    build_diagonal_matrix(Sigmahat, k, *S);
 
     // U = Q*Vhat
     printf("form U..\n");
-    matrix_matrix_mult(Q,Vhat,U);
+    matrix_matrix_mult(Q,Vhat,*U);
 
     // V = Qhat*Uhat
     printf("form V..\n");
-    matrix_matrix_mult(Qhat,Uhat,V);
+    matrix_matrix_mult(Qhat,Uhat,*V);
 
     // free stuff
     gsl_matrix_free(RN);
@@ -144,10 +154,15 @@ void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix *U, gsl_matrix *S
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR method and 
 (M M^T)^q M R sampling */
-void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix *U, gsl_matrix *S, gsl_matrix *V){
+void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix **U, gsl_matrix **S, gsl_matrix **V){
     int i,j,m,n;
     double val;
     m = M->size1; n = M->size2;
+
+    // setup mats
+    *U = gsl_matrix_calloc(m,k);
+    *S = gsl_matrix_calloc(k,k);
+    *V = gsl_matrix_calloc(n,k);
 
     // build random matrix
     printf("form RN..\n");
@@ -219,15 +234,15 @@ void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix *U,
 
     // record singular values
     printf("form S..\n");
-    build_diagonal_matrix(Sigmahat, k, S);
+    build_diagonal_matrix(Sigmahat, k, *S);
 
     // U = Q*Vhat
     printf("form U..\n");
-    matrix_matrix_mult(Q,Vhat,U);
+    matrix_matrix_mult(Q,Vhat,*U);
 
     // V = Qhat*Uhat
     printf("form V..\n");
-    matrix_matrix_mult(Qhat,Uhat,V);
+    matrix_matrix_mult(Qhat,Uhat,*V);
 
     // free stuff
     gsl_matrix_free(RN);

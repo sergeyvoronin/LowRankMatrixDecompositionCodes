@@ -9,7 +9,8 @@ int main (void)
     time_t start_time, end_time;
     //char *mfile = "../data/A_mat1.bin";
     char *mfile = "../data/A_mat_2kx4k.bin";
-
+    gsl_matrix *U,*S,*V;
+    
     // low rank svd rank
     k = 300;
     //k = 500;
@@ -20,16 +21,11 @@ int main (void)
     m = M->size1; n = M->size2;
     printf("sizes of M are %d by %d\n", m,n);
 
-    // set up SVD components
-    gsl_matrix *U = gsl_matrix_calloc(m,k);
-    gsl_matrix *S = gsl_matrix_calloc(k,k);
-    gsl_matrix *V = gsl_matrix_calloc(n,k);
-    
-    // call random SVD
+        // call random SVD
     printf("calling random SVD with k = %d..\n", k);
     time(&start_time);
-    //randomized_low_rank_svd1(M, k, U, S, V);
-    randomized_low_rank_svd2(M, k, U, S, V);
+    randomized_low_rank_svd1(M, k, &U, &S, &V);
+    //randomized_low_rank_svd2(M, k, U, S, V);
     //randomized_low_rank_svd3(M, k, 3, 1, U, S, V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
