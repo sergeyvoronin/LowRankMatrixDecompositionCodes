@@ -955,7 +955,6 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     maxdim = round(min(m,n)*frac_of_max_rank);
 
     Y = matrix_new(n,maxdim);
-    Y = matrix_new(n,maxdim);
     Qbig = matrix_new(m,maxdim);
     vi = vector_new(m);
     vj = vector_new(m);
@@ -1006,5 +1005,70 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     *Q = matrix_new(m, *estimated_rank);
     matrix_copy_first_columns(Qsmall, Qbig);
     QR_factorization_getQ(Qsmall, *Q);
+}
+
+
+
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *estimated_rank){
+    int m,n,i,j,ind,exit_loop = 0;
+    double error_norm;
+    mat *RN,*Y,*Y_new,*Y_big,*QtM,*QQtM;
+    vec *vi,*vj,*p,*p1;
+    m = M->nrows;
+    n = M->ncols;
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = matrix_new(n,kblock);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    printf("form Y: %d x %d..\n",m,kblock);
+    Y = matrix_new(m, kblock);
+    matrix_matrix_mult(M, RN, Y);
+
+    ind = 0;
+    while(!exit_loop){
+        printf("form Q..\n");
+        if(ind > 0){
+            matrix_delete(*Q);
+        }
+        *Q = matrix_new(Y->nrows, Y->ncols);
+        QR_factorization_getQ(Y, *Q);
+
+        // compute QtM
+        QtM = matrix_new((*Q)->ncols, M->ncols);
+        matrix_transpose_matrix_mult(*Q,M,QtM);
+
+        // compute QQtM
+        QQtM = matrix_new(M->nrows, M->ncols); 
+        matrix_matrix_mult(*Q,QtM,QQtM);
+
+        error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
+
+        printf("Y is of size %d x %d and error_norm = %f\n", Y->nrows, Y->ncols, error_norm);
+        *estimated_rank = Y->ncols;
+       
+        // add more samples if needed
+        if(error_norm > TOL){
+            Y_new = matrix_new(m, kblock);
+            initialize_random_matrix(RN);
+            matrix_matrix_mult(M, RN, Y_new);
+
+            Y_big = matrix_new(Y->nrows, Y->ncols + Y_new->ncols); 
+            append_matrices_horizontally(Y, Y_new, Y_big);
+            matrix_delete(Y);
+            Y = matrix_new(Y_big->nrows,Y_big->ncols);
+            matrix_copy(Y,Y_big);
+            
+            matrix_delete(Y_big);
+            matrix_delete(QtM);
+            matrix_delete(QQtM);
+            ind++;
+        }
+        else{
+            exit_loop = 1;
+        }    
+    }
 }
 

@@ -30,7 +30,8 @@ int main()
     //randomized_low_rank_svd1(M, k, &U, &S, &V);
     //randomized_low_rank_svd2(M, k, &U, &S, &V);
     //randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
-    randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
+    //randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
+    randomized_low_rank_svd2_autorank2(M, 500, 0.5, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
