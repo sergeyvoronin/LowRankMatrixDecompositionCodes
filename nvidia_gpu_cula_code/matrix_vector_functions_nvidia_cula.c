@@ -120,6 +120,61 @@ void vector_copy(vec *d, vec *s){
 }
 
 
+
+
+/* extract column of a matrix into a vector */
+void matrix_get_col(mat *M, int j, vec *column_vec){
+    int i;
+    #pragma omp parallel shared(column_vec,M,j) private(i) 
+    {
+    #pragma omp parallel for
+    for(i=0; i<M->nrows; i++){
+        vector_set_element(column_vec,i,matrix_get_element(M,i,j));
+    }
+    }
+}
+
+
+/* set column of matrix to vector */
+void matrix_set_col(mat *M, int j, vec *column_vec){
+    int i;
+    #pragma omp parallel shared(column_vec,M,j) private(i) 
+    {
+    #pragma omp for
+    for(i=0; i<M->nrows; i++){
+        matrix_set_element(M,i,j,vector_get_element(column_vec,i));
+    }
+    }
+}
+
+
+/* extract row i of a matrix into a vector */
+void matrix_get_row(mat *M, int i, vec *row_vec){
+    int j;
+    #pragma omp parallel shared(row_vec,M,i) private(j) 
+    {
+    #pragma omp parallel for
+    for(j=0; j<M->ncols; j++){ 
+        vector_set_element(row_vec,j,matrix_get_element(M,i,j));
+    }
+    }
+}
+
+
+/* put vector row_vec as row i of a matrix */
+void matrix_set_row(mat *M, int i, vec *row_vec){
+    int j;
+    #pragma omp parallel shared(row_vec,M,i) private(j) 
+    {
+    #pragma omp parallel for
+    for(j=0; j<M->ncols; j++){ 
+        matrix_set_element(M,i,j,vector_get_element(row_vec,j));
+    }
+    }
+}
+
+
+
 /* copy contents of mat S to D  */
 void matrix_copy(mat *D, mat *S){
     int i;
@@ -132,6 +187,37 @@ void matrix_copy(mat *D, mat *S){
     }
     }
 }
+
+
+
+/* copy the first k rows of M into M_out where k = M_out->nrows (M_out pre-initialized) */
+void matrix_copy_first_rows(mat *M_out, mat *M){
+    int i,k;
+    k = M_out->nrows;
+    vec * row_vec;
+    for(i=0; i<k; i++){
+        row_vec = vector_new(M->ncols);
+        matrix_get_row(M,i,row_vec);
+        matrix_set_row(M_out,i,row_vec);
+        vector_delete(row_vec);
+    }
+} 
+
+
+/* copy the first k columns of M into M_out where k = M_out->ncols (M_out pre-initialized) */
+void matrix_copy_first_columns(mat *M_out, mat *M){
+    int i,k;
+    k = M_out->ncols;
+    vec * col_vec;
+    for(i=0; i<k; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,i,col_vec);
+        matrix_set_col(M_out,i,col_vec);
+        vector_delete(col_vec);
+    }
+} 
+
+
 
 
 /* load matrix from file 
@@ -343,28 +429,27 @@ void invert_diagonal_matrix(mat *Dinv, mat *D){
 }
 
 
-
 /* initialize a random matrix */
 void initialize_random_matrix(mat *M){
-    int i,m,n;
+    int i,m,n,N;
     double val;
     m = M->nrows;
     n = M->ncols;
+    N = m*n;
 
     // seed 
     srand(time(NULL));
 
     // read and set elements
-    for(i=0; i<(m*n); i++){
+    for(i=0; i<N; i++){
         val = ((double) rand() / (RAND_MAX));
         M->d[i] = val;
     }
 }
 
 
-
 /* matrix frobenius norm */
-double matrix_frobenius_norm(mat *M){
+double get_matrix_frobenius_norm(mat *M){
     int i;
     double val, normval = 0;
     #pragma omp parallel shared(M,normval) private(i,val) 
@@ -425,23 +510,6 @@ void matrix_transpose_vector_mult(mat *M, vec *x, vec *y){
     culaDgemv ('T', M->nrows, M->ncols, alpha, M->d, M->nrows, x->d, 1, beta, y->d, 1);
 }
 
-
-/* set column of matrix to vector */
-void matrix_set_col(mat *M, int j, vec *column_vec){
-    int i;
-    for(i=0; i<M->nrows; i++){
-        matrix_set_element(M,i,j,vector_get_element(column_vec,i));
-    }
-}
-
-
-/* extract column of a matrix into a vector */
-void matrix_get_col(vec *column_vec, mat *M, int j){
-    int i;
-    for(i=0; i<M->nrows; i++){ 
-        vector_set_element(column_vec,i,matrix_get_element(M,i,j));
-    }
-}
 
 
 
@@ -527,9 +595,9 @@ void build_orthonormal_basis_from_mat(mat *A, mat *Q){
 
     for(ind=0; ind<num_ortos; ind++){
         for(j=0; j<n; j++){
-            matrix_get_col(vj, Q, j);
+            matrix_get_col(Q, j, vj);
             for(i=0; i<j; i++){
-                matrix_get_col(vi, Q, i);
+                matrix_get_col(Q, i, vi);
                 project_vector(vj, vi, p);
                 vector_sub(vj, p);
             }
@@ -639,6 +707,57 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 }
 
 
+/* append matrices side by side: C = [A, B] */
+void append_matrices_horizontally(mat *A, mat *B, mat *C){
+    int i,j;
+
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,i,A->ncols + j,matrix_get_element(B,i,j));
+        }
+    }
+
+    /*
+    for(i=0; i<((A->nrows)*(A->ncols)); i++){
+        C->d[ind] = A->d[i];
+        ind++;
+    }
+
+    for(i=0; i<((B->nrows)*(B->ncols)); i++){
+        C->d[ind] = B->d[i];
+        ind++;
+    }*/
+}
+
+
+
+/* append matrices vertically: C = [A; B] */
+void append_matrices_vertically(mat *A, mat *B, mat *C){
+    int i,j;
+
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
+        }
+    }
+}
+
+
+
+
+
 /* calculate percent error between A and B: 100*norm(A - B)/norm(A) */
 double get_percent_error_between_two_mats(mat *A, mat *B){
     int m,n;
@@ -648,9 +767,9 @@ double get_percent_error_between_two_mats(mat *A, mat *B){
     mat *A_minus_B = matrix_new(m,n);
     matrix_copy(A_minus_B, A);
     matrix_sub(A_minus_B, B);
-    normA = matrix_frobenius_norm(A);
-    normB = matrix_frobenius_norm(B);
-    normA_minus_B = matrix_frobenius_norm(A_minus_B);
+    normA = get_matrix_frobenius_norm(A);
+    normB = get_matrix_frobenius_norm(B);
+    normA_minus_B = get_matrix_frobenius_norm(A_minus_B);
     return 100.0*normA_minus_B/normA;
 }
 
@@ -667,5 +786,133 @@ void checkStatus(culaStatus status)
 
     culaShutdown();
     exit(EXIT_FAILURE);
+}
+
+
+void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *good_rank){
+    int m,n,i,j,ind,maxdim;
+    double vec_norm;
+    mat *RN,*Y,*Qbig,*Qsmall;
+    vec *vi,*vj,*p,*p1;
+    m = M->nrows;
+    n = M->ncols;
+    maxdim = round(min(m,n)*frac_of_max_rank);
+
+    Y = matrix_new(n,maxdim);
+    Qbig = matrix_new(m,maxdim);
+    vi = vector_new(m);
+    vj = vector_new(m);
+    p = vector_new(m);
+    p1 = vector_new(m);
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = matrix_new(n, maxdim);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    printf("form Y: %d x %d..\n",m,maxdim);
+    Y = matrix_new(m, maxdim);
+    matrix_matrix_mult(M, RN, Y);
+
+    // estimate rank k and build Q from Y
+    printf("form Qbig..\n");
+    Qbig = matrix_new(m, maxdim);
+
+    matrix_copy(Qbig, Y);
+
+    printf("estimate rank with TOL = %f..\n", TOL);
+    *good_rank = maxdim;
+    //for(ind=0; ind<num_ortos; ind++){
+    int forbreak = 0;
+    for(j=0; !forbreak && j<maxdim; j++){
+        matrix_get_col(Qbig, j, vj);
+        for(i=0; i<j; i++){
+            matrix_get_col(Qbig, i, vi);
+            project_vector(vj, vi, p);
+            vector_sub(vj, p);
+            if(vector_get2norm(p) < TOL && vector_get2norm(p1) < TOL){
+                *good_rank = j;
+                forbreak = 1;
+                break;
+            }
+            vector_copy(p1,p);
+        }
+        vec_norm = vector_get2norm(vj);
+        vector_scale(vj, 1.0/vec_norm);
+        matrix_set_col(Qbig, j, vj);
+    }
+    //}
+
+    printf("estimated rank = %d\n", *good_rank);
+    Qsmall = matrix_new(m, *good_rank);
+    *Q = matrix_new(m, *good_rank);
+    matrix_copy_first_columns(Qsmall, Qbig);
+    QR_factorization_getQ(Qsmall, *Q);
+}
+
+
+
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *good_rank){
+    int m,n,i,j,ind,exit_loop = 0;
+    double error_norm;
+    mat *RN,*Y,*Y_new,*Y_big,*QtM,*QQtM;
+    vec *vi,*vj,*p,*p1;
+    m = M->nrows;
+    n = M->ncols;
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = matrix_new(n,kblock);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    printf("form Y: %d x %d..\n",m,kblock);
+    Y = matrix_new(m, kblock);
+    matrix_matrix_mult(M, RN, Y);
+
+    ind = 0;
+    while(!exit_loop){
+        printf("form Q..\n");
+        if(ind > 0){
+            matrix_delete(*Q);
+        }
+        *Q = matrix_new(Y->nrows, Y->ncols);
+        QR_factorization_getQ(Y, *Q);
+
+        // compute QtM
+        QtM = matrix_new((*Q)->ncols, M->ncols);
+        matrix_transpose_matrix_mult(*Q,M,QtM);
+
+        // compute QQtM
+        QQtM = matrix_new(M->nrows, M->ncols); 
+        matrix_matrix_mult(*Q,QtM,QQtM);
+
+        error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
+
+        printf("Y is of size %d x %d and error_norm = %f\n", Y->nrows, Y->ncols, error_norm);
+        *good_rank = Y->ncols;
+       
+        // add more samples if needed
+        if(error_norm > TOL){
+            Y_new = matrix_new(m, kblock);
+            initialize_random_matrix(RN);
+            matrix_matrix_mult(M, RN, Y_new);
+
+            Y_big = matrix_new(Y->nrows, Y->ncols + Y_new->ncols); 
+            append_matrices_horizontally(Y, Y_new, Y_big);
+            matrix_delete(Y);
+            Y = matrix_new(Y_big->nrows,Y_big->ncols);
+            matrix_copy(Y,Y_big);
+            
+            matrix_delete(Y_big);
+            matrix_delete(QtM);
+            matrix_delete(QQtM);
+            ind++;
+        }
+        else{
+            exit_loop = 1;
+        }    
+    }
 }
 

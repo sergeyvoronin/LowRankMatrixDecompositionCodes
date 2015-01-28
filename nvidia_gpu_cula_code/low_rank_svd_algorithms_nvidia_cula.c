@@ -2,10 +2,15 @@
 
 
 /* computes the approximate low rank SVD of rank k of matrix M using BBt version */
-void randomized_low_rank_svd1(mat *M, int k, mat *U, mat *S, mat *V){
+void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V){
     int i,j,m,n;
     double val;
     m = M->nrows; n = M->ncols;
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
 
     // build random matrix
     mat *RN = matrix_new(n, k);
@@ -49,20 +54,20 @@ void randomized_low_rank_svd1(mat *M, int k, mat *U, mat *S, mat *V){
     for(i=0; i<k; i++){
         vector_set_element(singvals,i,sqrt(vector_get_element(evals,i)));
     }
-    initialize_diagonal_matrix(S, singvals);
+    initialize_diagonal_matrix(*S, singvals);
     
     // compute U = Q*Uhat mxk * kxk = mxk  
     printf("form U..\n");
-    matrix_matrix_mult(Q,Uhat,U);
+    matrix_matrix_mult(Q,Uhat,*U);
 
     // compute nxk V 
     // V = B^T Uhat * Sigma^{-1}
     printf("form V..\n");
     mat *Sinv = matrix_new(k,k);
     mat *UhatSinv = matrix_new(k,k);
-    invert_diagonal_matrix(Sinv,S);
+    invert_diagonal_matrix(Sinv,*S);
     matrix_matrix_mult(Uhat,Sinv,UhatSinv);
-    matrix_matrix_mult(Bt,UhatSinv,V);
+    matrix_matrix_mult(Bt,UhatSinv,*V);
 
     // clean up
     matrix_delete(RN);
@@ -77,10 +82,15 @@ void randomized_low_rank_svd1(mat *M, int k, mat *U, mat *S, mat *V){
 
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR version */
-void randomized_low_rank_svd2(mat *M, int k, mat *U, mat *S, mat *V){
+void randomized_low_rank_svd2(mat *M, int k, mat **U, mat **S, mat **V){
     int i,j,m,n;
     double val;
     m = M->nrows; n = M->ncols;
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
 
     // build random matrix
     mat *RN = matrix_new(n, k);
@@ -114,15 +124,15 @@ void randomized_low_rank_svd2(mat *M, int k, mat *U, mat *S, mat *V){
     printf("doing SVD..\n");
     mat *Uhat = matrix_new(k,k);
     mat *Vhat_trans = matrix_new(k,k);
-    singular_value_decomposition(Rhat, Uhat, S, Vhat_trans);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
 
     // U = Q*Vhat_trans
     printf("form U..\n");
-    matrix_matrix_transpose_mult(Q,Vhat_trans,U);
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
 
     // V = Qhat*Uhat
     printf("form V..\n");
-    matrix_matrix_mult(Qhat,Uhat,V);
+    matrix_matrix_mult(Qhat,Uhat,*V);
 
     // free stuff
     matrix_delete(RN);
@@ -139,10 +149,15 @@ void randomized_low_rank_svd2(mat *M, int k, mat *U, mat *S, mat *V){
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR version 
  * with range sampling via (M M^T)^q M R*/
-void randomized_low_rank_svd3_old(mat *M, int k, int q, mat *U, mat *S, mat *V){
+void randomized_low_rank_svd3_old(mat *M, int k, int q, mat **U, mat **S, mat **V){
     int i,j,m,n;
     double val;
     m = M->nrows; n = M->ncols;
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
 
     // build random matrix
     mat *RN = matrix_new(n, k);
@@ -207,15 +222,15 @@ void randomized_low_rank_svd3_old(mat *M, int k, int q, mat *U, mat *S, mat *V){
     printf("doing SVD..\n");
     mat *Uhat = matrix_new(k,k);
     mat *Vhat_trans = matrix_new(k,k);
-    singular_value_decomposition(Rhat, Uhat, S, Vhat_trans);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
 
     // U = Q*Vhat_trans
     printf("form U..\n");
-    matrix_matrix_transpose_mult(Q,Vhat_trans,U);
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
 
     // V = Qhat*Uhat
     printf("form V..\n");
-    matrix_matrix_mult(Qhat,Uhat,V);
+    matrix_matrix_mult(Qhat,Uhat,*V);
 
     // free stuff
     matrix_delete(RN);
@@ -234,10 +249,15 @@ void randomized_low_rank_svd3_old(mat *M, int k, int q, mat *U, mat *S, mat *V){
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR version 
  * with range sampling via (M M^T)^q M R*/
-void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat *U, mat *S, mat *V){
+void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat **V){
     int i,j,m,n;
     double val;
     m = M->nrows; n = M->ncols;
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
 
     // build random matrix
     mat *RN = matrix_new(n, k);
@@ -303,15 +323,15 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat *U, mat *S, mat *
     printf("doing SVD..\n");
     mat *Uhat = matrix_new(k,k);
     mat *Vhat_trans = matrix_new(k,k);
-    singular_value_decomposition(Rhat, Uhat, S, Vhat_trans);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
 
     // U = Q*Vhat_trans
     printf("form U..\n");
-    matrix_matrix_transpose_mult(Q,Vhat_trans,U);
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
 
     // V = Qhat*Uhat
     printf("form V..\n");
-    matrix_matrix_mult(Qhat,Uhat,V);
+    matrix_matrix_mult(Qhat,Uhat,*V);
 
     // free stuff
     matrix_delete(RN);
@@ -325,5 +345,125 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat *U, mat *S, mat *
     matrix_delete(Bt);
     matrix_delete(Yorth);
     matrix_delete(Zorth);
+}
+
+
+
+/* computes the approximate low rank SVD of rank k of matrix M using QR version 
+automatically estimates the rank needed */
+void randomized_low_rank_svd2_autorank1(mat *M, double frac_of_max_rank, double TOL, mat **U, mat **S, mat **V){
+    int i,j,m,n,k,kinit;
+    double val;
+    mat *Q;
+    m = M->nrows; n = M->ncols;
+    kinit = min(m,n);
+
+    // estimate rank k and build Q from Y
+    printf("estimating rank and building Q..\n");
+    //build_orthonormal_basis_from_mat(Y,Q);
+    //QR_factorization_getQ(Y, Q);
+    estimate_rank_and_buildQ(M,frac_of_max_rank,TOL,&Q,&k);
+    printf("estimated rank = %d\n", k);
+    printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
+    // form Bt = Mt*Q : nxm * mxk = nxk
+    printf("form Bt..\n");
+    mat *Bt = matrix_new(n,k);
+    matrix_transpose_matrix_mult(M,Q,Bt);
+
+    // compute QR factorization of Bt    
+    //M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
+    //void compact_QR_factorization(mat *M, mat *Q, mat *R)
+    printf("doing QR..\n");
+    mat *Qhat = matrix_new(n,k);
+    mat *Rhat = matrix_new(k,k);
+    compact_QR_factorization(Bt,Qhat,Rhat);
+
+    // compute SVD of Rhat (kxk)
+    printf("doing SVD..\n");
+    mat *Uhat = matrix_new(k,k);
+    mat *Vhat_trans = matrix_new(k,k);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
+
+    // U = Q*Vhat_trans
+    printf("form U..\n");
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
+
+    // V = Qhat*Uhat
+    printf("form V..\n");
+    matrix_matrix_mult(Qhat,Uhat,*V);
+
+    // free stuff
+    matrix_delete(Q);
+    matrix_delete(Rhat);
+    matrix_delete(Qhat);
+    matrix_delete(Uhat);
+    matrix_delete(Vhat_trans);
+    matrix_delete(Bt);
+}
+
+
+
+/* computes the approximate low rank SVD of rank k of matrix M using QR version 
+automatically estimates the rank needed */
+void randomized_low_rank_svd2_autorank2(mat *M, int kblocksize, double TOL, mat **U, mat **S, mat **V){
+    int i,j,m,n,k;
+    double val;
+    mat *Q;
+    m = M->nrows; n = M->ncols;
+
+    // estimate rank k and build Q from Y
+    printf("estimating rank and building Q..\n");
+    //estimate_rank_and_buildQ(M,frac_of_max_rank,TOL,&Q,&k);
+    estimate_rank_and_buildQ2(M, kblocksize, TOL, &Q, &k);
+    printf("estimated rank = %d\n", k);
+    printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
+
+    // setup U, S, and V 
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
+
+    // form Bt = Mt*Q : nxm * mxk = nxk
+    printf("form Bt..\n");
+    mat *Bt = matrix_new(n,k);
+    printf("M dims: %d x %d\n", M->nrows, M->ncols);
+    printf("Q dims: %d x %d\n", Q->nrows, Q->ncols);
+    printf("Bt dims: %d x %d\n", Bt->nrows, Bt->ncols);
+    matrix_transpose_matrix_mult(M,Q,Bt);
+
+    // compute QR factorization of Bt    
+    //M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
+    //void compact_QR_factorization(mat *M, mat *Q, mat *R)
+    printf("doing QR..\n");
+    mat *Qhat = matrix_new(n,k);
+    mat *Rhat = matrix_new(k,k);
+    compact_QR_factorization(Bt,Qhat,Rhat);
+
+    // compute SVD of Rhat (kxk)
+    printf("doing SVD..\n");
+    mat *Uhat = matrix_new(k,k);
+    mat *Vhat_trans = matrix_new(k,k);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
+
+    // U = Q*Vhat_trans
+    printf("form U..\n");
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
+
+    // V = Qhat*Uhat
+    printf("form V..\n");
+    matrix_matrix_mult(Qhat,Uhat,*V);
+
+    // free stuff
+    matrix_delete(Q);
+    matrix_delete(Rhat);
+    matrix_delete(Qhat);
+    matrix_delete(Uhat);
+    matrix_delete(Vhat_trans);
+    matrix_delete(Bt);
 }
 

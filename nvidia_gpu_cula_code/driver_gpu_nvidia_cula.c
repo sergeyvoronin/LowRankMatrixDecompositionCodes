@@ -9,7 +9,7 @@ int main(int argc, char** argv){
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat1.bin";
+    char *M_file = "../data/A_mat_6kx12k.bin";
 
     culaStatus status;
 
@@ -37,7 +37,8 @@ int main(int argc, char** argv){
     time(&start_time);
     //randomized_low_rank_svd1(M, k, U, S, V);
     //randomized_low_rank_svd2(M, k, U, S, V);
-    randomized_low_rank_svd3(M, k, 20, 1, U, S, V);
+    //randomized_low_rank_svd3(M, k, 10, 1, U, S, V);
+    randomized_low_rank_svd2_autorank2(M, 500, 0.5, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
@@ -46,11 +47,11 @@ int main(int argc, char** argv){
     form_svd_product_matrix(U,S,V,P);
 
     // get norms of each
-    normM = matrix_frobenius_norm(M);
-    normU = matrix_frobenius_norm(U);
-    normS = matrix_frobenius_norm(S);
-    normV = matrix_frobenius_norm(V);
-    normP = matrix_frobenius_norm(P);
+    normM = get_matrix_frobenius_norm(M);
+    normU = get_matrix_frobenius_norm(U);
+    normS = get_matrix_frobenius_norm(S);
+    normV = get_matrix_frobenius_norm(V);
+    normP = get_matrix_frobenius_norm(P);
     printf("normM = %f ; normU = %f ; normS = %f ; normV = %f ; normP = %f\n", normM, normU, normS, normV, normP);
 
     // calculate percent error

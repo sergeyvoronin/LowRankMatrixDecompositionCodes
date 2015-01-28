@@ -68,8 +68,24 @@ double vector_get2norm(vec *v);
 void vector_copy(vec *d, vec *s);
 
 
+/* matrix access functions */
+void matrix_get_col(mat *M, int j, vec *column_vec);
+
+void matrix_set_col(mat *M, int j, vec *column_vec);
+
+void matrix_get_row(mat *M, int i, vec *row_vec);
+
+void matrix_set_row(mat *M, int i, vec *row_vec);
+
+
 /* copy contents of mat S to D  */
 void matrix_copy(mat *D, mat *S);
+
+
+void matrix_copy_first_rows(mat *M_out, mat *M);
+
+void matrix_copy_first_columns(mat *M_out, mat *M);
+
 
 
 /* load matrix from file 
@@ -135,7 +151,7 @@ void initialize_random_matrix(mat *M);
 
 
 /* matrix frobenius norm */
-double matrix_frobenius_norm(mat *M);
+double get_matrix_frobenius_norm(mat *M);
 
 
 /* C = A*B ; column major */
@@ -163,7 +179,7 @@ void matrix_set_col(mat *M, int j, vec *column_vec);
 
 
 /* extract column of a matrix into a vector */
-void matrix_get_col(vec *column_vec, mat *M, int j);
+void matrix_get_col(mat *M, int j, vec *column_vec);
 
 
 
@@ -233,8 +249,22 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt);
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
 
 
+void append_matrices_horizontally(mat *A, mat *B, mat *C);
+
+
+void append_matrices_vertically(mat *A, mat *B, mat *C);
+
+
 /* calculate percent error between A and B: 100*norm(A - B)/norm(A) */
 double get_percent_error_between_two_mats(mat *A, mat *B);
 
 
 void checkStatus(culaStatus status);
+
+
+/* for autorank 1 */
+void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *good_rank);
+
+/* for autorank 2 */
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *good_rank);
+
