@@ -36,7 +36,7 @@ Once the matrix is made one can use any of the drivers to compute the low
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
 
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
-The MKL code also has some autorank functionality (in development).
+The MKL and GPU codes also has two autorank functions (in development).
 
 Notice that for the multiprocessor OpenMP based code, one can control the number of 
 threads used via an environmental variable. For instance, in bash type:
