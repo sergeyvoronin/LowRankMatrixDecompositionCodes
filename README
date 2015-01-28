@@ -38,6 +38,34 @@ rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
 The MKL and GPU codes also has two autorank functions (in development).
 
+Sample calling procedure is as follows (similar for all 3 codes).
+
+=======================
+
+// declare matrices
+mat *M, *U, *S, *V;
+
+// load matrix M from file
+gsl_matrix *M = matrix_load_from_binary_file(mfile);
+m = M->nrows; n = M->ncols;
+
+// set svd rank (< min(m,n))
+k = 300;
+
+// call random SVD (use one of the five variants)
+randomized_low_rank_svd1(M, k, &U, &S, &V);
+randomized_low_rank_svd2(M, k, &U, &S, &V);
+randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
+randomized_low_rank_svd2_autorank1(M, frac, TOL, &U, &S, &V);
+randomized_low_rank_svd2_autorank2(M, blocksize, TOL, &U, &S, &V);
+
+// write results to disk
+matrix_write_to_binary_file(U, "data/U.bin");
+matrix_write_to_binary_file(S, "data/S.bin");
+matrix_write_to_binary_file(V, "data/V.bin");
+
+=======================
+
 Notice that for the multiprocessor OpenMP based code, one can control the number of 
 threads used via an environmental variable. For instance, in bash type:
 export OMP_NUM_THREADS=6
