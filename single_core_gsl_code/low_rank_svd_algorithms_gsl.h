@@ -13,3 +13,5 @@ void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix *
 (M M^T)^q M R sampling */
 void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix **U, gsl_matrix **S, gsl_matrix **V);
 
+
+void randomized_low_rank_svd2_autorank1(gsl_matrix *M, double frac_of_max_rank, double TOL, gsl_matrix**U, gsl_matrix **S, gsl_matrix **V);

@@ -8,6 +8,8 @@ void randomized_low_rank_svd1(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix *
     double val;
     m = M->size1; n = M->size2;
 
+    printf("running randomized_low_rank_svd1 with k=%d\n", k);
+
     // setup mats
     *U = gsl_matrix_calloc(m,k);
     *S = gsl_matrix_calloc(k,k);
@@ -88,6 +90,8 @@ void randomized_low_rank_svd2(gsl_matrix *M, int k, gsl_matrix **U, gsl_matrix *
     double val;
     m = M->size1; n = M->size2;
 
+    printf("running randomized_low_rank_svd2 with k=%d\n", k);
+
     // setup mats
     *U = gsl_matrix_calloc(m,k);
     *S = gsl_matrix_calloc(k,k);
@@ -158,6 +162,8 @@ void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix **U
     int i,j,m,n;
     double val;
     m = M->size1; n = M->size2;
+
+    printf("running randomized_low_rank_svd3 with k=%d, q=%d, s=%d\n", k,q,s);
 
     // setup mats
     *U = gsl_matrix_calloc(m,k);
@@ -256,5 +262,71 @@ void randomized_low_rank_svd3(gsl_matrix *M, int k, int q, int s, gsl_matrix **U
     gsl_matrix_free(Yorth);
     gsl_matrix_free(Zorth);
     gsl_matrix_free(Z);
+}
+
+
+
+/* computes the approximate low rank SVD of rank k of matrix M using QR version 
+automatically estimates the rank needed */
+void randomized_low_rank_svd2_autorank1(gsl_matrix *M, double frac_of_max_rank, double TOL, gsl_matrix**U, gsl_matrix **S, gsl_matrix **V){
+    int i,j,m,n,k,kinit;
+    double val;
+    gsl_matrix *Q;
+    m = M->size1; n = M->size2;
+    kinit = min(m,n);
+
+    printf("frac_of_max_rank = %4.2f\n", frac_of_max_rank);
+    printf("running randomized_low_rank_svd2_autorank1 with frac_of_max_rank = %f, TOL=%f\n", frac_of_max_rank, TOL);
+
+    // estimate rank k and build Q from Y
+    printf("estimating rank and building Q..\n");
+    //build_orthonormal_basis_from_mat(Y,Q);
+    //QR_factorization_getQ(Y, Q);
+    estimate_rank_and_buildQ(M,frac_of_max_rank,TOL,&Q,&k);
+    printf("rank used = %d\n", k);
+
+    // setup U, S, and V 
+    *U = gsl_matrix_calloc(m,k);
+    *S = gsl_matrix_calloc(k,k);
+    *V = gsl_matrix_calloc(n,k);
+
+    // form Bt = Mt*Q : nxm * mxk = nxk
+    printf("form Bt..\n");
+    gsl_matrix *Bt = gsl_matrix_alloc(n,k);
+    matrix_transpose_matrix_mult(M,Q,Bt);
+
+    printf("doing QR..\n");
+    gsl_matrix *Qhat = gsl_matrix_calloc(n,k);
+    gsl_matrix *Rhat = gsl_matrix_calloc(k,k);
+    compute_QR_compact_factorization(Bt,Qhat,Rhat);
+
+    // compute SVD of Rhat (kxk)
+    printf("doing SVD..\n");
+    gsl_matrix *Uhat = gsl_matrix_alloc(k,k);
+    gsl_vector *Sigmahat = gsl_vector_alloc(k);
+    gsl_matrix *Vhat = gsl_matrix_alloc(k,k);
+    gsl_vector *svd_work_vec = gsl_vector_alloc(k);
+    gsl_matrix_memcpy(Uhat, Rhat);
+    gsl_linalg_SV_decomp (Uhat, Vhat, Sigmahat, svd_work_vec);
+
+    // record singular values
+    printf("form S..\n");
+    build_diagonal_matrix(Sigmahat, k, *S);
+
+    // U = Q*Vhat
+    printf("form U..\n");
+    matrix_matrix_mult(Q,Vhat,*U);
+
+    // V = Qhat*Uhat
+    printf("form V..\n");
+    matrix_matrix_mult(Qhat,Uhat,*V);
+
+    // free stuff
+    gsl_matrix_free(Q);
+    gsl_matrix_free(Rhat);
+    gsl_matrix_free(Qhat);
+    gsl_matrix_free(Uhat);
+    gsl_matrix_free(Vhat);
+    gsl_matrix_free(Bt);
 }
 

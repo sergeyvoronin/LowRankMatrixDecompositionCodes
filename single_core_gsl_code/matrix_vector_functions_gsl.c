@@ -482,3 +482,86 @@ double get_percent_error_between_two_mats(gsl_matrix *A, gsl_matrix *B){
 }
 
 
+
+/* copy the first k columns of M into M_out where k = M_out->ncols (M_out pre-initialized) */
+void matrix_copy_first_columns(gsl_matrix *M_out, gsl_matrix *M){
+    int i,k;
+    k = M_out->size2;
+    gsl_vector * col_vec;
+    for(i=0; i<k; i++){
+        col_vec = gsl_vector_calloc(M->size1);
+        gsl_matrix_get_col(col_vec,M,i);
+        gsl_matrix_set_col(M_out,i,col_vec);
+        gsl_vector_free(col_vec);
+    }
+}
+
+
+
+void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL, gsl_matrix **Q, int *good_rank){
+    int m,n,i,j,ind,maxdim;
+    double vec_norm;
+    gsl_matrix *RN,*Y,*Qbig,*Qsmall;
+    gsl_vector *vi,*vj,*p,*p1;
+    m = M->size1;
+    n = M->size2;
+    maxdim = round(min(m,n)*frac_of_max_rank);
+
+    Y = gsl_matrix_calloc(n,maxdim);
+    Qbig = gsl_matrix_calloc(m,maxdim);
+    vi = gsl_vector_calloc(m);
+    vj = gsl_vector_calloc(m);
+    p = gsl_vector_calloc(m);
+    p1 = gsl_vector_calloc(m);
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = gsl_matrix_calloc(n, maxdim);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    printf("form Y: %d x %d..\n",m,maxdim);
+    Y = gsl_matrix_calloc(m, maxdim);
+    matrix_matrix_mult(M, RN, Y);
+
+    // estimate rank k and build Q from Y
+    printf("form Qbig..\n");
+    Qbig = gsl_matrix_calloc(m, maxdim);
+
+    gsl_matrix_memcpy(Qbig, Y);
+
+    printf("estimate rank with TOL = %f..\n", TOL);
+    *good_rank = maxdim;
+    int forbreak = 0;
+    for(j=0; !forbreak && j<maxdim; j++){
+        gsl_matrix_get_col(vj, Qbig, j);
+        for(i=0; i<j; i++){
+            gsl_matrix_get_col(vi, Qbig, i);
+            project_vector(vj, vi, p);
+            gsl_vector_sub(vj, p);
+            if(gsl_blas_dnrm2(p) < TOL && gsl_blas_dnrm2(p1) < TOL){
+                *good_rank = j;
+                forbreak = 1;
+                break;
+            }
+            gsl_vector_memcpy(p1,p);
+        }
+        vec_norm = gsl_blas_dnrm2(vj);
+        gsl_vector_scale(vj, 1.0/vec_norm);
+        gsl_matrix_set_col(Qbig, j, vj);
+    }
+
+    printf("estimated rank = %d\n", *good_rank);
+    Qsmall = gsl_matrix_calloc(m, *good_rank);
+    *Q = gsl_matrix_calloc(m, *good_rank);
+    matrix_copy_first_columns(Qsmall, Qbig);
+    QR_factorization_getQ(Qsmall, *Q);
+
+    gsl_matrix_free(Qbig);
+    gsl_matrix_free(Qsmall);
+    gsl_vector_free(p);
+    gsl_vector_free(p1);
+    gsl_vector_free(vi);
+    gsl_vector_free(vj);
+}
+

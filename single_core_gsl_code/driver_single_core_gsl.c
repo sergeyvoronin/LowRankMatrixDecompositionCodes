@@ -22,11 +22,12 @@ int main (void)
     printf("sizes of M are %d by %d\n", m,n);
 
         // call random SVD
-    printf("calling random SVD with k = %d..\n", k);
+    printf("calling random SVD..\n");
     time(&start_time);
-    randomized_low_rank_svd1(M, k, &U, &S, &V);
-    //randomized_low_rank_svd2(M, k, U, S, V);
-    //randomized_low_rank_svd3(M, k, 3, 1, U, S, V);
+    //randomized_low_rank_svd1(M, k, &U, &S, &V);
+    //randomized_low_rank_svd2(M, k, &U, &S, &V);
+    //randomized_low_rank_svd3(M, k, 3, 1, &U, &S, &V);
+    randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
