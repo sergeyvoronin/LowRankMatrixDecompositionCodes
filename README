@@ -36,7 +36,8 @@ Once the matrix is made one can use any of the drivers to compute the low
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
 
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
-The MKL and GPU codes also has two autorank functions (in development).
+Each of the codes also has two autorank functions based on version II of the randomized algorithm, 
+for use when a good rank k to use is not known in advance.
 
 Sample calling procedure is as follows (similar for all 3 codes).
 
@@ -49,7 +50,7 @@ mat *M, *U, *S, *V;
 gsl_matrix *M = matrix_load_from_binary_file(mfile);
 m = M->nrows; n = M->ncols;
 
-// set svd rank (< min(m,n))
+// set svd rank (< min(m,n)) if not using the autorank version
 k = 300;
 
 // call random SVD (use one of the five variants)
