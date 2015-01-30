@@ -160,5 +160,12 @@ double get_percent_error_between_two_mats(gsl_matrix *A, gsl_matrix *B);
 /* copy the first k columns of M into M_out where k = M_out->ncols (M_out pre-initialized) */
 void matrix_copy_first_columns(gsl_matrix *M_out, gsl_matrix *M);
 
+/* C = [A, B]; */
+void append_matrices_horizontally(gsl_matrix *A, gsl_matrix *B, gsl_matrix *C);
+
 /* for rsvd autorank1 */
 void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL, gsl_matrix **Q, int *good_rank);
+
+/* for rsvd autorank2 */
+void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix **Q, int *good_rank);
+
