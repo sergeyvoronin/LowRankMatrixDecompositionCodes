@@ -945,7 +945,7 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 }
 
 
-void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *estimated_rank){
+void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *good_rank){
     int m,n,i,j,ind,maxdim;
     double vec_norm;
     mat *RN,*Y,*Qbig,*Qsmall;
@@ -954,8 +954,6 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     n = M->ncols;
     maxdim = round(min(m,n)*frac_of_max_rank);
 
-    Y = matrix_new(n,maxdim);
-    Qbig = matrix_new(m,maxdim);
     vi = vector_new(m);
     vj = vector_new(m);
     p = vector_new(m);
@@ -978,8 +976,7 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     matrix_copy(Qbig, Y);
 
     printf("estimate rank with TOL = %f..\n", TOL);
-    *estimated_rank = maxdim;
-    //for(ind=0; ind<num_ortos; ind++){
+    *good_rank = maxdim;
     int forbreak = 0;
     for(j=0; !forbreak && j<maxdim; j++){
         matrix_get_col(Qbig, j, vj);
@@ -988,7 +985,7 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
             project_vector(vj, vi, p);
             vector_sub(vj, p);
             if(vector_get2norm(p) < TOL && vector_get2norm(p1) < TOL){
-                *estimated_rank = j;
+                *good_rank = j;
                 forbreak = 1;
                 break;
             }
@@ -998,18 +995,22 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
         vector_scale(vj, 1.0/vec_norm);
         matrix_set_col(Qbig, j, vj);
     }
-    //}
 
-    printf("estimated rank = %d\n", *estimated_rank);
-    Qsmall = matrix_new(m, *estimated_rank);
-    *Q = matrix_new(m, *estimated_rank);
+    printf("estimated rank = %d\n", *good_rank);
+    Qsmall = matrix_new(m, *good_rank);
+    *Q = matrix_new(m, *good_rank);
     matrix_copy_first_columns(Qsmall, Qbig);
     QR_factorization_getQ(Qsmall, *Q);
+
+    matrix_delete(RN);
+    matrix_delete(Y);
+    matrix_delete(Qsmall);
+    matrix_delete(Qbig);
 }
 
 
 
-void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *estimated_rank){
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *good_rank){
     int m,n,i,j,ind,exit_loop = 0;
     double error_norm;
     mat *RN,*Y,*Y_new,*Y_big,*QtM,*QQtM;
@@ -1047,7 +1048,7 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *est
         error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
 
         printf("Y is of size %d x %d and error_norm = %f\n", Y->nrows, Y->ncols, error_norm);
-        *estimated_rank = Y->ncols;
+        *good_rank = Y->ncols;
        
         // add more samples if needed
         if(error_norm > TOL){
@@ -1062,11 +1063,14 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *est
             matrix_copy(Y,Y_big);
             
             matrix_delete(Y_big);
+            matrix_delete(Y_new);
             matrix_delete(QtM);
             matrix_delete(QQtM);
             ind++;
         }
         else{
+            matrix_delete(RN);
+            matrix_delete(Y);
             exit_loop = 1;
         }    
     }

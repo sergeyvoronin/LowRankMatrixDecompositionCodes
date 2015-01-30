@@ -798,8 +798,6 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     n = M->ncols;
     maxdim = round(min(m,n)*frac_of_max_rank);
 
-    Y = matrix_new(n,maxdim);
-    Qbig = matrix_new(m,maxdim);
     vi = vector_new(m);
     vj = vector_new(m);
     p = vector_new(m);
@@ -849,6 +847,11 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
     *Q = matrix_new(m, *good_rank);
     matrix_copy_first_columns(Qsmall, Qbig);
     QR_factorization_getQ(Qsmall, *Q);
+
+    matrix_delete(RN);
+    matrix_delete(Y);
+    matrix_delete(Qsmall);
+    matrix_delete(Qbig);
 }
 
 
@@ -906,13 +909,16 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
             matrix_copy(Y,Y_big);
             
             matrix_delete(Y_big);
+            matrix_delete(Y_new);
             matrix_delete(QtM);
             matrix_delete(QQtM);
             ind++;
         }
         else{
+            matrix_delete(RN);
             exit_loop = 1;
         }    
     }
+
 }
 

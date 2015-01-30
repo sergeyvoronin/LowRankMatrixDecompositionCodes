@@ -525,8 +525,6 @@ void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL
     n = M->size2;
     maxdim = round(min(m,n)*frac_of_max_rank);
 
-    Y = gsl_matrix_calloc(n,maxdim);
-    Qbig = gsl_matrix_calloc(m,maxdim);
     vi = gsl_vector_calloc(m);
     vj = gsl_vector_calloc(m);
     p = gsl_vector_calloc(m);
@@ -575,6 +573,8 @@ void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL
     matrix_copy_first_columns(Qsmall, Qbig);
     QR_factorization_getQ(Qsmall, *Q);
 
+    gsl_matrix_free(RN);
+    gsl_matrix_free(Y);
     gsl_matrix_free(Qbig);
     gsl_matrix_free(Qsmall);
     gsl_vector_free(p);
@@ -637,12 +637,14 @@ void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix
             Y = gsl_matrix_calloc(Y_big->size1,Y_big->size2);
             gsl_matrix_memcpy(Y,Y_big);
             
+            gsl_matrix_free(Y_new);
             gsl_matrix_free(Y_big);
             gsl_matrix_free(QtM);
             gsl_matrix_free(QQtM);
             ind++;
         }
         else{
+            gsl_matrix_free(RN);
             exit_loop = 1;
         }    
     }

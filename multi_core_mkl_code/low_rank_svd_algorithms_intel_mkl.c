@@ -7,6 +7,8 @@ void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V){
     double val;
     m = M->nrows; n = M->ncols;
 
+    printf("running randomized_low_rank_svd1 with k = %d\n", k);
+
     // setup mats
     *U = matrix_new(m,k);
     *S = matrix_new(k,k);
@@ -87,6 +89,8 @@ void randomized_low_rank_svd2(mat *M, int k, mat **U, mat **S, mat **V){
     int i,j,m,n;
     double val;
     m = M->nrows; n = M->ncols;
+
+    printf("running randomized_low_rank_svd2 with k = %d\n", k);
 
     // setup mats
     *U = matrix_new(m,k);
@@ -253,6 +257,8 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
     double val;
     m = M->nrows; n = M->ncols;
 
+    printf("running randomized_low_rank_svd3 with k = %d, q = %d, s = %d\n", k,q,s);
+
     // setup mats
     *U = matrix_new(m,k);
     *S = matrix_new(k,k);
@@ -355,13 +361,16 @@ void randomized_low_rank_svd2_autorank1(mat *M, double frac_of_max_rank, double 
     m = M->nrows; n = M->ncols;
     kinit = min(m,n);
 
+    
+    printf("running randomized_low_rank_svd2_autorank1 with frac_of_max_rank = %f, TOL = %f\n", frac_of_max_rank, TOL);
+
     // estimate rank k and build Q from Y
     printf("estimating rank and building Q..\n");
     //build_orthonormal_basis_from_mat(Y,Q);
     //QR_factorization_getQ(Y, Q);
     estimate_rank_and_buildQ(M,frac_of_max_rank,TOL,&Q,&k);
     printf("estimated rank = %d\n", k);
-    printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
+    //printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
 
     // setup U, S, and V 
     *U = matrix_new(m,k);
@@ -413,12 +422,14 @@ void randomized_low_rank_svd2_autorank2(mat *M, int kblocksize, double TOL, mat 
     mat *Q;
     m = M->nrows; n = M->ncols;
 
+    printf("running randomized_low_rank_svd2_autorank2 with kblocksize = %d, TOL = %f\n", kblocksize, TOL);
+
     // estimate rank k and build Q from Y
     printf("estimating rank and building Q..\n");
     //estimate_rank_and_buildQ(M,frac_of_max_rank,TOL,&Q,&k);
     estimate_rank_and_buildQ2(M, kblocksize, TOL, &Q, &k);
     printf("estimated rank = %d\n", k);
-    printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
+    //printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
 
     // setup U, S, and V 
     *U = matrix_new(m,k);
