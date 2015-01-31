@@ -1010,10 +1010,10 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
 
 
 
-void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *good_rank){
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q, int *good_rank){
     int m,n,i,j,ind,exit_loop = 0;
     double error_norm;
-    mat *RN,*Y,*Y_new,*Y_big,*QtM,*QQtM;
+    mat *RN,*Y_new,*Y_big,*QtM,*QQtM;
     vec *vi,*vj,*p,*p1;
     m = M->nrows;
     n = M->ncols;
@@ -1025,8 +1025,8 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
 
     // multiply to get matrix of random samples Y
     printf("form Y: %d x %d..\n",m,kblock);
-    Y = matrix_new(m, kblock);
-    matrix_matrix_mult(M, RN, Y);
+    *Y = matrix_new(m, kblock);
+    matrix_matrix_mult(M, RN, *Y);
 
     ind = 0;
     while(!exit_loop){
@@ -1034,8 +1034,8 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
         if(ind > 0){
             matrix_delete(*Q);
         }
-        *Q = matrix_new(Y->nrows, Y->ncols);
-        QR_factorization_getQ(Y, *Q);
+        *Q = matrix_new((*Y)->nrows, (*Y)->ncols);
+        QR_factorization_getQ(*Y, *Q);
 
         // compute QtM
         QtM = matrix_new((*Q)->ncols, M->ncols);
@@ -1047,8 +1047,8 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
 
         error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
 
-        printf("Y is of size %d x %d and error_norm = %f\n", Y->nrows, Y->ncols, error_norm);
-        *good_rank = Y->ncols;
+        printf("Y is of size %d x %d and error_norm = %f\n", (*Y)->nrows, (*Y)->ncols, error_norm);
+        *good_rank = (*Y)->ncols;
        
         // add more samples if needed
         if(error_norm > TOL){
@@ -1056,11 +1056,11 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
             initialize_random_matrix(RN);
             matrix_matrix_mult(M, RN, Y_new);
 
-            Y_big = matrix_new(Y->nrows, Y->ncols + Y_new->ncols); 
-            append_matrices_horizontally(Y, Y_new, Y_big);
-            matrix_delete(Y);
-            Y = matrix_new(Y_big->nrows,Y_big->ncols);
-            matrix_copy(Y,Y_big);
+            Y_big = matrix_new((*Y)->nrows, (*Y)->ncols + Y_new->ncols); 
+            append_matrices_horizontally(*Y, Y_new, Y_big);
+            matrix_delete(*Y);
+            *Y = matrix_new(Y_big->nrows,Y_big->ncols);
+            matrix_copy(*Y,Y_big);
             
             matrix_delete(Y_big);
             matrix_delete(Y_new);
@@ -1070,7 +1070,6 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *goo
         }
         else{
             matrix_delete(RN);
-            matrix_delete(Y);
             exit_loop = 1;
         }    
     }

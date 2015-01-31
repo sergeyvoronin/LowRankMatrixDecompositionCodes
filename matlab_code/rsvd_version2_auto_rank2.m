@@ -1,6 +1,6 @@
 % Version II with autorank II
 % kblock: size of random samples block added at each update
-% TOL: when to stop adding samples, when ||Q*Q'*A - A|| gets small
+% TOL: when to stop adding samples, when ||Q*Q'*A - A||_2 < TOL
 function [U,Sigma,V] = rsvd_version2_auto_rank2(A,kblock,TOL)
     m = size(A,1);
     n = size(A,2);
@@ -26,7 +26,6 @@ function [U,Sigma,V] = rsvd_version2_auto_rank2(A,kblock,TOL)
     fprintf('using Q of size %d \times %d\n', size(Q,1), size(Q,2));
 
     %B = Q'*A; % k \times m * m \times n = k \times n
-    %Bt = B'; % n \times k
     Bt = A'*Q;
 
     [Qhat,Rhat] = qr(Bt,0);

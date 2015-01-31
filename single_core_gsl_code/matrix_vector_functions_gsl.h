@@ -167,5 +167,5 @@ void append_matrices_horizontally(gsl_matrix *A, gsl_matrix *B, gsl_matrix *C);
 void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL, gsl_matrix **Q, int *good_rank);
 
 /* for rsvd autorank2 */
-void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix **Q, int *good_rank);
+void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix **Y, gsl_matrix **Q, int *good_rank);
 

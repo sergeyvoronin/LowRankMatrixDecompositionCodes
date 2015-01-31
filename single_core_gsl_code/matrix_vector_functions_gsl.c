@@ -585,10 +585,10 @@ void estimate_rank_and_buildQ(gsl_matrix *M, double frac_of_max_rank, double TOL
 
 
 
-void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix **Q, int *good_rank){
+void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix **Y, gsl_matrix **Q, int *good_rank){
     int m,n,i,j,ind,exit_loop = 0;
     double error_norm;
-    gsl_matrix *RN,*Y,*Y_new,*Y_big,*QtM,*QQtM;
+    gsl_matrix *RN,*Y_new,*Y_big,*QtM,*QQtM;
     gsl_vector *vi,*vj,*p,*p1;
     m = M->size1;
     n = M->size2;
@@ -600,8 +600,8 @@ void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix
 
     // multiply to get matrix of random samples Y
     printf("form Y: %d x %d..\n",m,kblock);
-    Y = gsl_matrix_calloc(m, kblock);
-    matrix_matrix_mult(M, RN, Y);
+    *Y = gsl_matrix_calloc(m, kblock);
+    matrix_matrix_mult(M, RN, *Y);
 
     ind = 0;
     while(!exit_loop){
@@ -609,8 +609,8 @@ void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix
         if(ind > 0){
             gsl_matrix_free(*Q);
         }
-        *Q = gsl_matrix_calloc(Y->size1, Y->size2);
-        QR_factorization_getQ(Y, *Q);
+        *Q = gsl_matrix_calloc((*Y)->size1, (*Y)->size2);
+        QR_factorization_getQ(*Y, *Q);
 
         // compute QtM
         QtM = gsl_matrix_calloc((*Q)->size2, M->size2);
@@ -622,8 +622,8 @@ void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix
 
         error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
 
-        printf("Y is of size %d x %d and error_norm = %f\n", Y->size1, Y->size2, error_norm);
-        *good_rank = Y->size2;
+        printf("Y is of size %d x %d and error_norm = %f\n", (*Y)->size1, (*Y)->size2, error_norm);
+        *good_rank = (*Y)->size2;
        
         // add more samples if needed
         if(error_norm > TOL){
@@ -631,11 +631,11 @@ void estimate_rank_and_buildQ2(gsl_matrix *M, int kblock, double TOL, gsl_matrix
             initialize_random_matrix(RN);
             matrix_matrix_mult(M, RN, Y_new);
 
-            Y_big = gsl_matrix_calloc(Y->size1, Y->size2 + Y_new->size2); 
-            append_matrices_horizontally(Y, Y_new, Y_big);
-            gsl_matrix_free(Y);
-            Y = gsl_matrix_calloc(Y_big->size1,Y_big->size2);
-            gsl_matrix_memcpy(Y,Y_big);
+            Y_big = gsl_matrix_calloc((*Y)->size1, (*Y)->size2 + Y_new->size2); 
+            append_matrices_horizontally(*Y, Y_new, Y_big);
+            gsl_matrix_free(*Y);
+            *Y = gsl_matrix_calloc(Y_big->size1,Y_big->size2);
+            gsl_matrix_memcpy(*Y,Y_big);
             
             gsl_matrix_free(Y_new);
             gsl_matrix_free(Y_big);

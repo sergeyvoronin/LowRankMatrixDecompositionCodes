@@ -421,14 +421,14 @@ automatically estimates the rank needed */
 void randomized_low_rank_svd2_autorank2(mat *M, int kblocksize, double TOL, mat **U, mat **S, mat **V){
     int i,j,m,n,k;
     double val;
-    mat *Q;
+    mat *Y,*Q;
     m = M->nrows; n = M->ncols;
 
     printf("running randomized_low_rank_svd2_autorank2 with kblocksize = %d, TOL = %f\n", kblocksize, TOL);
 
     // estimate rank k and build Q from Y
     printf("estimating rank and building Q..\n");
-    estimate_rank_and_buildQ2(M, kblocksize, TOL, &Q, &k);
+    estimate_rank_and_buildQ2(M, kblocksize, TOL, &Y, &Q, &k);
     printf("estimated rank = %d\n", k);
     //printf("norm(Q,fro) = %f\n", get_matrix_frobenius_norm(Q));
 
@@ -474,5 +474,103 @@ void randomized_low_rank_svd2_autorank2(mat *M, int kblocksize, double TOL, mat 
     matrix_delete(Uhat);
     matrix_delete(Vhat_trans);
     matrix_delete(Bt);
+}
+
+
+
+/* computes the approximate low rank SVD of rank k of matrix M using QR version 
+via (M M^T)^q M R, automatically estimates the rank needed */
+void randomized_low_rank_svd3_autorank2(mat *M, int kblocksize, double TOL, int q, int s, mat **U, mat **S, mat **V){
+    int i,j,m,n,k;
+    double val;
+    mat *Y,*Q;
+    m = M->nrows; n = M->ncols;
+
+    printf("running randomized_low_rank_svd3_autorank2 with kblocksize = %d, TOL = %f, q = %d, s = %d\n", kblocksize,TOL,q,s);
+
+    printf("estimating rank..\n");
+    estimate_rank_and_buildQ2(M, kblocksize, TOL, &Y, &Q, &k);
+    printf("estimated rank = %d\n", k);
+
+    // setup mats
+    *U = matrix_new(m,k);
+    *S = matrix_new(k,k);
+    *V = matrix_new(n,k);
+
+    // now build up (M M^T)^q R
+    mat *Z = matrix_new(n,k);
+    mat *Yorth;
+    mat *Zorth;
+    Yorth = matrix_new(m,k);
+    Zorth = matrix_new(n,k);
+    for(j=1; j<q; j++){
+        printf("in loop for j=%d of %d\n", j, q);
+
+        if((2*j-2) % s == 0){
+            printf("orthogonalize Y..\n");
+            QR_factorization_getQ(Y, Yorth);
+            printf("Z = M'*Yorth..\n");
+            matrix_transpose_matrix_mult(M,Yorth,Z);
+        }
+        else{
+            printf("Z = M'*Y..\n");
+            matrix_transpose_matrix_mult(M,Y,Z);
+        }
+
+        
+        if((2*j-1) % s == 0){
+            printf("orthogonalize Z..\n");
+            QR_factorization_getQ(Z, Zorth);
+            printf("Y = M*Zorth..\n");
+            matrix_matrix_mult(M,Zorth,Y);
+        }
+        else{
+            printf("Y = M*Z..\n");
+            matrix_matrix_mult(M,Z,Y);
+        }
+    }
+
+    // orthogonalize on exit from loop to get Q
+    //mat *Q = matrix_new(m,k);
+    QR_factorization_getQ(Y, Q);
+
+    // form Bt = Mt*Q : nxm * mxk = nxk
+    printf("form Bt..\n");
+    mat *Bt = matrix_new(n,k);
+    matrix_transpose_matrix_mult(M,Q,Bt);
+
+    // compute QR factorization of Bt    
+    //M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
+    //void compact_QR_factorization(mat *M, mat *Q, mat *R)
+    printf("doing QR..\n");
+    mat *Qhat = matrix_new(n,k);
+    mat *Rhat = matrix_new(k,k);   
+    compact_QR_factorization(Bt,Qhat,Rhat);
+
+    // compute SVD of Rhat (kxk)
+    printf("doing SVD..\n");
+    mat *Uhat = matrix_new(k,k);
+    mat *Vhat_trans = matrix_new(k,k);
+    singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
+
+    // U = Q*Vhat_trans
+    printf("form U..\n");
+    matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
+
+    // V = Qhat*Uhat
+    printf("form V..\n");
+    matrix_matrix_mult(Qhat,Uhat,*V);
+
+    // free stuff
+    matrix_delete(Y);
+    matrix_delete(Q);
+    matrix_delete(Z);
+    matrix_delete(Rhat);
+    matrix_delete(Qhat);
+    matrix_delete(Uhat);
+    matrix_delete(Vhat_trans);
+    matrix_delete(Bt);
+    matrix_delete(Yorth);
+    matrix_delete(Zorth);
 }
 

@@ -16,7 +16,7 @@ function [U,Sigma,V] = rsvd_version2_auto_rank1(A,frac_of_max_rank,TOL)
     p1 = zeros(maxdim,1);
 
     for j=1:maxdim
-        estimated_rank = j;
+        good_rank = j;
         ej = zeros(maxdim,1);
         ej(j) = 1;
 
@@ -40,7 +40,7 @@ function [U,Sigma,V] = rsvd_version2_auto_rank1(A,frac_of_max_rank,TOL)
         end
     end
 
-    Q = Qbig(:,1:estimated_rank);
+    Q = Qbig(:,1:good_rank);
     [Q,~] = qr(Q,0);
     fprintf('using Q of size %d times %d\n', size(Q,1), size(Q,2));
 

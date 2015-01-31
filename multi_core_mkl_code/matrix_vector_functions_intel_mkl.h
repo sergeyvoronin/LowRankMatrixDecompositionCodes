@@ -271,7 +271,7 @@ void QR_factorization_getQ(mat *M, mat *Q);
 void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat **Q, int *good_rank);
 
 /* for autorank 2 */
-void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Q, int *good_rank);
+void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q, int *good_rank);
 
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);

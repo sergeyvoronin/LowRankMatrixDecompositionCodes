@@ -36,8 +36,8 @@ Once the matrix is made one can use any of the drivers to compute the low
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
 
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
-Each of the codes also has two autorank functions based on version II of the randomized algorithm, 
-for use when a good rank k to use is not known in advance.
+Each of the codes also has three autorank functions based on version II and III 
+of the randomized algorithm, for use when a good rank k to use is not known in advance.
 
 Sample calling procedure is as follows (similar for all 3 codes).
 
@@ -58,7 +58,8 @@ randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
 randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
 randomized_low_rank_svd2_autorank1(M, frac, TOL, &U, &S, &V);
-randomized_low_rank_svd2_autorank2(M, blocksize, TOL, &U, &S, &V);
+randomized_low_rank_svd2_autorank2(M, kblocksize, TOL, &U, &S, &V);
+randomized_low_rank_svd3_autorank2(M, kblocksize, TOL, q, s, &U, &S, &V);
 
 // write results to disk
 matrix_write_to_binary_file(U, "data/U.bin");
