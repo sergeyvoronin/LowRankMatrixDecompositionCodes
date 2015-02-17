@@ -19,7 +19,7 @@ https://software.intel.com/en-us/intel-mkl
 https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
-For simple illustration of the randomized SVD algorithms, see the Octave implementation.
+For simple illustration of the randomized SVD algorithms, see the Matlab implementation.
 Each C implementation resides in its own subfolder with a compile.sh file. After 
 necessary paths (PATH variable, LD_LIBRARY_PATH) are set for referencing 
 gsl, mkl, and cuda/cula, this file 
@@ -33,11 +33,13 @@ In order to make a test matrix, use the provide make_matrix_binary.m script whic
 from Octave or Matlab. Note that this script writes a binary matrix file.
 
 Once the matrix is made one can use any of the drivers to compute the low 
-rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols).
+rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols) 
+or the tolerance parameter if one of the autorank methods is used.
 
 One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
 Each of the codes also has three autorank functions based on version II and III 
 of the randomized algorithm, for use when a good rank k to use is not known in advance.
+Thus, there is a total of 6 functions for computing the low rank SVD.
 
 Sample calling procedure is as follows (similar for all 3 codes).
 
@@ -51,6 +53,7 @@ gsl_matrix *M = matrix_load_from_binary_file(mfile);
 m = M->nrows; n = M->ncols;
 
 // set svd rank (< min(m,n)) if not using the autorank version
+// for autorank, define instead the TOL parameter (i.e. TOL = 0.1)
 k = 300;
 
 // call random SVD (use one of the five variants)
@@ -77,8 +80,7 @@ best results, but the optimal configuration differs for different systems.
 Example run with GPU code
 
 First, make the matrix
-$ octave
-> more off;
+$ matlab -nodesktop
 > make_matrix_binary2 
 > ls data/A_mat_6kx12k.bin
 $
