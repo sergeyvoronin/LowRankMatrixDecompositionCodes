@@ -43,7 +43,7 @@ Each of the codes also has three autorank functions based on version II and III
 of the randomized algorithm, for use when a good rank k to use is not known in advance.
 Thus, there is a total of 6 functions for computing the low rank SVD.
 
-Sample calling procedure is as follows (similar for all 3 codes).
+Sample calling procedure is as follows (similar for all 3 architectures).
 
 =======================
 
@@ -51,7 +51,7 @@ Sample calling procedure is as follows (similar for all 3 codes).
 mat *M, *U, *S, *V;
 
 // load matrix M from file
-gsl_matrix *M = matrix_load_from_binary_file(mfile);
+M = matrix_load_from_binary_file(mfile);
 m = M->nrows; n = M->ncols;
 
 // set svd rank (< min(m,n)) if not using the autorank version
