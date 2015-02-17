@@ -6,7 +6,7 @@ function [U,Sigma,V] = rsvd_version1(A,k)
     R = randn(n,k); % this can be built up quickly on disk..
     Y = A*R; % m \times n * n \times k = m \times k
 
-    Q = orth(Y);
+    [Q,~] = qr(Y,0);
 
     B = Q'*A;
 
@@ -25,3 +25,4 @@ function [U,Sigma,V] = rsvd_version1(A,k)
         V(:,j) = v_j;
     end
 end
+
