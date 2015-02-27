@@ -8,8 +8,12 @@ There are three codes: for single processor (with GNU GSL), multiprocessor
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 A simple implementation in Matlab (or Octave) is also provided for illustration purposes.
 
-Written by Sergey Voronin, 2014-2015
+Written by Sergey Voronin, 2014-2015 as part of a collaborative project with Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
+
+Algorithms used based on those originally described in the article: 
+"Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions," N. Halko, P.G. Martinsson, J. Tropp, SIAM Review, 53(2), 2011
+with some modifications. See pdf in description/ folder for more details.
 
 ============ summary of installation and usage ==============
 
@@ -58,7 +62,7 @@ m = M->nrows; n = M->ncols;
 // for autorank, define instead the TOL parameter (i.e. TOL = 0.1)
 k = 300;
 
-// call random SVD (use one of the five variants)
+// call random SVD (use one of the six variants)
 randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
 randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
