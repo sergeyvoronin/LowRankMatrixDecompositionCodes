@@ -678,12 +678,9 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
     int m,n,k;
     m = M->nrows; n = M->ncols;
     k = min(m,n);
-    vec * work = vector_new(k);
     vec * svals = vector_new(k);
-    //LAPACKE_dgesvd( LAPACK_ROW_MAJOR, 'A', 'A', m, n, M->d, n, svals->d, U->d, m, Vt->d, n, work->d );
-    culaDgesvd('A', 'A', k, k, M->d, k, svals->d, U->d, k, Vt->d, k);
+    culaDgesvd('S', 'S', m, n, M->d, m, svals->d, U->d, m, Vt->d, k);
     initialize_diagonal_matrix(S, svals);
-    vector_delete(work);
     vector_delete(svals);
 }
 
