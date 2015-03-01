@@ -25,6 +25,17 @@ https://software.intel.com/en-us/intel-mkl
 https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
+NOTE on software: The GSL library is free to download and distributed under a GNU license. A free 
+version of the CULA library is available for download, which includes all the functions 
+necessary for RSVDPACK (matrix-matrix and matrix-vector ops, QR, SVD, etc). 
+The Intel MKL library is available 
+in commercial form. The free, non-commercial versions of the Intel MKL library and the 
+C++ compiler which were available just a few months ago are not available for 
+download at this time. I hope that Intel will bring back the non-commercial 
+download of the MKL library or at least reaches a suitable licensing agreement 
+with educational Institutions, as the library greatly benefits the development of 
+scientific computing software and the testing of new numerical algorithms. 
+
 For simple illustration of the randomized SVD algorithms, see the Matlab implementation.
 Each C implementation resides in its own subfolder with a compile.sh file. After 
 necessary paths (PATH variable, LD_LIBRARY_PATH) are set for referencing 
