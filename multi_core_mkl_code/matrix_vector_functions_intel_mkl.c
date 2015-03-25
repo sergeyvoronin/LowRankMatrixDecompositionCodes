@@ -735,6 +735,23 @@ void fill_matrix_from_row_list(mat *M, vec *I, mat *M_k){
 void append_matrices_horizontally(mat *A, mat *B, mat *C){
     int i,j;
 
+    #pragma omp parallel shared(C,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((A->nrows)*(A->ncols)); i++){
+        C->d[i] = A->d[i];
+    }
+    }
+
+    #pragma omp parallel shared(C,B,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((B->nrows)*(B->ncols)); i++){
+        C->d[i + (A->nrows)*(A->ncols)] = B->d[i];
+    }
+    }
+
+    /* working:
     for(i=0; i<A->nrows; i++){
         for(j=0; j<A->ncols; j++){
             matrix_set_element(C,i,j,matrix_get_element(A,i,j));
@@ -745,17 +762,6 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C){
         for(j=0; j<B->ncols; j++){
             matrix_set_element(C,i,A->ncols + j,matrix_get_element(B,i,j));
         }
-    }
-
-    /*
-    for(i=0; i<((A->nrows)*(A->ncols)); i++){
-        C->d[ind] = A->d[i];
-        ind++;
-    }
-
-    for(i=0; i<((B->nrows)*(B->ncols)); i++){
-        C->d[ind] = B->d[i];
-        ind++;
     }*/
 }
 
