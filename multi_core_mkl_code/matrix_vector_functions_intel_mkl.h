@@ -3,6 +3,10 @@
 #include "mkl_lapacke.h"
 #include "mkl_vsl.h"
 
+#include <time.h>
+#include <sys/time.h> // for clock_gettime()
+
+
 #define SEED    777
 #define BRNG    VSL_BRNG_MCG31
 #define METHOD  VSL_RNG_METHOD_GAUSSIAN_ICDF
@@ -56,6 +60,14 @@ mat * matrix_load_from_binary_file(char *fname);
 void matrix_write_to_binary_file(mat *M, char *fname);
 
 
+/* print to terminal */
+void matrix_print(mat * M);
+
+
+/* print to terminal */
+void vector_print(vec * v);
+
+/* v(:) = data */
 void vector_set_data(vec *v, double *data);
 
 
@@ -93,6 +105,9 @@ void vector_sub(vec *a, vec *b);
 
 /* subtract B from A and save result in A  */
 void matrix_sub(mat *A, mat *B);
+
+/* A = A - u*v */
+void matrix_sub_column_times_row_vector(mat *A, vec *u, vec *v);
 
 
 /* matrix frobenius norm */
@@ -133,12 +148,12 @@ void matrix_vector_mult(mat *M, vec *x, vec *y);
 void matrix_transpose_vector_mult(mat *M, vec *x, vec *y);
 
 
-/* set column of matrix to vector */
-void matrix_set_col(mat *M, int j, vec *column_vec);
-
 
 /* extract column of a matrix into a vector */
 void matrix_get_col(mat *M, int j, vec *column_vec);
+
+/* set column of matrix to vector */
+void matrix_set_col(mat *M, int j, vec *column_vec);
 
 
 /* extract row i of a matrix into a vector */
@@ -147,6 +162,23 @@ void matrix_get_row(mat *M, int i, vec *row_vec);
 
 /* put vector row_vec as row i of a matrix */
 void matrix_set_row(mat *M, int i, vec *row_vec);
+
+
+/* Mc = M(:,inds) */
+void matrix_get_selected_columns(mat *M, int *inds, mat *Mc);
+
+
+/* M(:,inds) = Mc */
+void matrix_set_selected_columns(mat *M, int *inds, mat *Mc);
+
+
+/* Mr = M(inds,:) */
+void matrix_get_selected_rows(mat *M, int *inds, mat *Mr);
+
+
+/* M(inds,:) = Mr */
+void matrix_set_selected_rows(mat *M, int *inds, mat *Mr);
+
 
 
 
@@ -201,6 +233,10 @@ end
 void build_orthonormal_basis_from_mat(mat *A, mat *Q);
 
 
+
+void fill_vector_from_row_list(vec *input, vec *inds, vec *output);
+
+
 void matrix_copy_first_rows(mat *M_out, mat *M);
 
 
@@ -226,10 +262,10 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out);
 
 
-void fill_matrix_from_column_list(mat *M, vec *I, mat *M_k);
+//void fill_matrix_from_column_list(mat *M, vec *I, mat *M_k);
 
 
-void fill_matrix_from_row_list(mat *M, vec *I, mat *M_k);
+//void fill_matrix_from_row_list(mat *M, vec *I, mat *M_k);
 
 
 void append_matrices_horizontally(mat *A, mat *B, mat *C);
@@ -275,4 +311,8 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
 
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
+
+/* get seconds for recording runtime */
+double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval);
+
 

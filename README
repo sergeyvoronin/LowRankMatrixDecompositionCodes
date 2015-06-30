@@ -1,19 +1,31 @@
-RSVDPACK: Implementations of fast randomized algorithms for computing low rank SVD decompositions of a matrix using randomized sampling. Given, a real mxn matrix A and a rank parameter 
-k<< min(m,n) (or optionally, a tolerance parameter instead of rank) the routines compute  
+RSVDPACK: Implementations of fast randomized algorithms for computing low rank SVD decompositions of a matrix and new rank revealing decompositions 
+using randomized sampling. Given, a real mxn matrix A and a rank parameter 
+k<< min(m,n) (or optionally, a tolerance parameter instead of rank) the 
+rsvd routines compute  
 U_k, Sigma_k, and V_k
 where U_k is mxk, Sigma_k is kxk, and V_k is nxk, such that:
 A \approx U_k Sigma_k V^T_k
-See the included pdf file (in description/ folder) for a more detailed description.
-There are three codes: for single processor (with GNU GSL), multiprocessor 
+
+The rank revealing routines (work in progress) can compute 
+decompositions of the form 
+A \approx Q_k B_k from which other decompositions may be efficiently computed.
+
+For more detailed information on the implemented algorithms see:
+http://arxiv.org/abs/1502.05366
+http://arxiv.org/abs/1503.07157
+
+See the included pdf file (in description/ folder) for a more detailed description. There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
-A simple implementation in Matlab (or Octave) is also provided for illustration purposes.
+A simple implementation in Matlab (or Octave) is also provided for 
+illustration purposes. The QB algorithms are currently implemented only with 
+the multi-core Intel MKL version but will be expanded to other architectures.
 
 Written by Sergey Voronin, 2014-2015 as part of a collaborative project with Per-Gunnar Martinsson.
-Tested with GSL-1.16, icc/mkl 14.03, cuda/cula 6.0
+Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18
 
 Algorithms used based on those originally described in the article: 
 "Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions," N. Halko, P.G. Martinsson, J. Tropp, SIAM Review, 53(2), 2011
-with some modifications. See pdf in description/ folder for more details.
+with some modifications. See the arxiv articles for more details.
 
 ============ summary of installation and usage ==============
 
@@ -26,18 +38,17 @@ https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
 NOTE on software: The GSL library is free to download and distributed under a GNU license. A free 
-version of the CULA library is available for download, which includes all the functions 
+version of the CULA library is available for download at 
+http://www.culatools.com/downloads/ , which includes all the functions 
 necessary for RSVDPACK (matrix-matrix and matrix-vector ops, QR, SVD, etc). 
-The Intel MKL library is available 
-in commercial form. The free, non-commercial versions of the Intel MKL library and the 
-C++ compiler which were available just a few months ago are not available for 
-download at this time. I hope that Intel will bring back the non-commercial 
-download of the MKL library or at least reaches a suitable licensing agreement 
-with educational Institutions, as the library greatly benefits the development of 
-scientific computing software and the testing of new numerical algorithms. 
+The Intel MKL library is generally available in commercial form. 
+The free, non-commercial versions of the Intel MKL library and the 
+C++ compiler can be obtained from Intel by qualified users. Please 
+see: https://software.intel.com/en-us/qualify-for-free-software .  
 
-For simple illustration of the randomized SVD algorithms, see the Matlab implementation.
-Each C implementation resides in its own subfolder with a compile.sh file. After 
+For simple illustration of the randomized SVD algorithms, see the 
+Matlab implementation. Each C implementation resides in its own subfolder 
+with a compile.sh file. After 
 necessary paths (PATH variable, LD_LIBRARY_PATH) are set for referencing 
 gsl, mkl, and cuda/cula, this file 
 should be modified to reflect any local system changes and executed to yield the 
@@ -58,7 +69,13 @@ Each of the codes also has three autorank functions based on version II and III
 of the randomized algorithm, for use when a good rank k to use is not known in advance.
 Thus, there is a total of 6 functions for computing the low rank SVD.
 
-Sample calling procedure is as follows (similar for all 3 architectures).
+Additionally, for the multi-core architecture the following algorithms 
+are also available:
+full column pivoted QR, partial column pivoted QR, single vector randQB with
+power method, and blocked randQB with power method
+
+Sample calling procedure for the rsvd algorithms is as follows 
+(similar for all 3 architectures).
 
 =======================
 
@@ -96,7 +113,7 @@ best results, but the optimal configuration differs for different systems.
 
 Example run with GPU code
 
-First, make the matrix
+First, make the matrix using the provided script:
 $ matlab -nodesktop
 > make_matrix_binary2 
 > ls data/A_mat_6kx12k.bin

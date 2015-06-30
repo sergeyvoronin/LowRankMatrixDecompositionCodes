@@ -3,7 +3,7 @@
 #define min(x,y) (((x) < (y)) ? (x) : (y))
 #define max(x,y) (((x) > (y)) ? (x) : (y))
 
-#include "low_rank_svd_algorithms_intel_mkl.h"
+#include "rank_revealing_algorithms_intel_mkl.h"
 
 int main()
 {
@@ -11,7 +11,8 @@ int main()
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat_6kx12k.bin";
+    //char *M_file = "../data/A_mat_6kx12k.bin";
+    char *M_file = "../data/A_mat_2kx4k.bin";
 
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
@@ -21,9 +22,6 @@ int main()
 
     // now test low rank SVD of M..
     k = 1000;
-    /*U = matrix_new(m,k);
-    S = matrix_new(k,k);
-    V = matrix_new(n,k);*/
     
     printf("calling random SVD..\n");
     time(&start_time);
