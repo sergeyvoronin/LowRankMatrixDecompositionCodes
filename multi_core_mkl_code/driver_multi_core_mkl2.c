@@ -21,7 +21,7 @@ int main()
 
 
     // set up vars - filename to record timings, number of trials, k and block size
-    fp = fopen("timings/driver_multi_core_mkl1.txt","a");
+    fp = fopen("timings/driver_multi_core_mkl2.txt","a");
     ntrials = 2;
     k = 100;
     kstep = 20;

@@ -1090,7 +1090,7 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
 }
 
 
-
+/* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
     int k,m,n;
     double alpha, beta;

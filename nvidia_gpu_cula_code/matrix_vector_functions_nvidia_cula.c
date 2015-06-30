@@ -1,6 +1,5 @@
-/*
- * cula gpu code with host openmp 
- */
+/* high level matrix/vector functions using NVIDIA CULA library for blas 
+this uses the device versions of the CULA functions with host openmp*/
 
 #include "matrix_vector_functions_nvidia_cula.h"
 
@@ -9,7 +8,6 @@
 mat * matrix_new(int nrows, int ncols)
 {
     mat *M = malloc(sizeof(mat));
-    //M->d = (double*)mkl_malloc(sizeof(double) * nrows*ncols, 64);
     M->d = (double*)calloc(nrows*ncols, sizeof(double));
     M->nrows = nrows;
     M->ncols = ncols;
@@ -47,8 +45,6 @@ void matrix_set_element(mat *M, int row_num, int col_num, double val){
     M->d[col_num*(M->nrows) + row_num] = val;
 }
 
-
-
 double matrix_get_element(mat *M, int row_num, int col_num){
     //return M->d[row_num*(M->ncols) + col_num];
     return M->d[col_num*(M->nrows) + row_num];
@@ -63,203 +59,6 @@ void vector_set_element(vec *v, int row_num, double val){
 double vector_get_element(vec *v, int row_num){
     return v->d[row_num];
 }
-
-
-void vector_set_data(vec *v, double *data){
-    int i;
-    #pragma omp parallel shared(v) private(i) 
-    {
-    #pragma omp for
-    for(i=0; i<(v->nrows); i++){
-        v->d[i] = data[i];
-    }
-    }
-}
-
-
-/* scale vector by a constant */
-void vector_scale(vec *v, double scalar){
-    int i;
-    #pragma omp parallel shared(v,scalar) private(i) 
-    {
-    #pragma omp for
-    for(i=0; i<(v->nrows); i++){
-        v->d[i] = scalar*(v->d[i]);
-    }
-    }
-}
-
-
-/* compute euclidean norm of vector */
-double vector_get2norm(vec *v){
-    int i;
-    double val, normval = 0;
-    #pragma omp parallel shared(v,normval) private(i,val) 
-    {
-    #pragma omp for reduction(+:normval)
-    for(i=0; i<(v->nrows); i++){
-        val = v->d[i];
-        normval += val*val;
-    }
-    }
-    return sqrt(normval);
-}
-
-
-/* copy contents of vec s to d  */
-void vector_copy(vec *d, vec *s){
-    int i;
-    //#pragma omp parallel for
-    #pragma omp parallel shared(d,s) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<(s->nrows); i++){
-        d->d[i] = s->d[i];
-    }
-    }
-}
-
-
-
-
-/* extract column of a matrix into a vector */
-void matrix_get_col(mat *M, int j, vec *column_vec){
-    int i;
-    #pragma omp parallel shared(column_vec,M,j) private(i) 
-    {
-    #pragma omp parallel for
-    for(i=0; i<M->nrows; i++){
-        vector_set_element(column_vec,i,matrix_get_element(M,i,j));
-    }
-    }
-}
-
-
-/* set column of matrix to vector */
-void matrix_set_col(mat *M, int j, vec *column_vec){
-    int i;
-    #pragma omp parallel shared(column_vec,M,j) private(i) 
-    {
-    #pragma omp for
-    for(i=0; i<M->nrows; i++){
-        matrix_set_element(M,i,j,vector_get_element(column_vec,i));
-    }
-    }
-}
-
-
-/* extract row i of a matrix into a vector */
-void matrix_get_row(mat *M, int i, vec *row_vec){
-    int j;
-    #pragma omp parallel shared(row_vec,M,i) private(j) 
-    {
-    #pragma omp parallel for
-    for(j=0; j<M->ncols; j++){ 
-        vector_set_element(row_vec,j,matrix_get_element(M,i,j));
-    }
-    }
-}
-
-
-/* put vector row_vec as row i of a matrix */
-void matrix_set_row(mat *M, int i, vec *row_vec){
-    int j;
-    #pragma omp parallel shared(row_vec,M,i) private(j) 
-    {
-    #pragma omp parallel for
-    for(j=0; j<M->ncols; j++){ 
-        matrix_set_element(M,i,j,vector_get_element(row_vec,j));
-    }
-    }
-}
-
-
-
-/* copy contents of mat S to D  */
-void matrix_copy(mat *D, mat *S){
-    int i;
-    //#pragma omp parallel for
-    #pragma omp parallel shared(D,S) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<((S->nrows)*(S->ncols)); i++){
-        D->d[i] = S->d[i];
-    }
-    }
-}
-
-
-
-/* copy the first k rows of M into M_out where k = M_out->nrows (M_out pre-initialized) */
-void matrix_copy_first_rows(mat *M_out, mat *M){
-    int i,k;
-    k = M_out->nrows;
-    vec * row_vec;
-    for(i=0; i<k; i++){
-        row_vec = vector_new(M->ncols);
-        matrix_get_row(M,i,row_vec);
-        matrix_set_row(M_out,i,row_vec);
-        vector_delete(row_vec);
-    }
-} 
-
-
-/* copy the first k columns of M into M_out where k = M_out->ncols (M_out pre-initialized) */
-void matrix_copy_first_columns(mat *M_out, mat *M){
-    int i,k;
-    k = M_out->ncols;
-    vec * col_vec;
-    for(i=0; i<k; i++){
-        col_vec = vector_new(M->nrows);
-        matrix_get_col(M,i,col_vec);
-        matrix_set_col(M_out,i,col_vec);
-        vector_delete(col_vec);
-    }
-} 
-
-
-
-
-/* load matrix from file 
-format:
-% comment
-num_rows num_columns num_nonzeros
-row col nnz
-.....
-row col nnz
-*/
-mat * matrix_load_from_text_file(char *fname){
-    int i, j, num_rows, num_columns, num_nonzeros, row_num, col_num;
-    double nnz_val;
-    char *nnz_val_str;
-    char *line;
-    FILE *fp;
-    mat *M;
-    
-    line = (char*)malloc(200*sizeof(char));
-    fp = fopen(fname,"r");
-    fgets(line,100,fp); //read comment
-    fgets(line,100,fp); //read dimensions and nnzs 
-    sscanf(line, "%d %d %d", &num_rows, &num_columns, &num_nonzeros);
-    M = matrix_new(num_rows,num_columns);
-
-    // read and set elements
-    nnz_val_str = (char*)malloc(50*sizeof(char));
-    for(i=0; i<(num_nonzeros); i++){
-        fgets(line,100,fp); 
-        sscanf(line, "%d %d %s", &row_num, &col_num, nnz_val_str);
-        nnz_val = atof(nnz_val_str);
-        matrix_set_element(M,row_num,col_num,nnz_val);
-    }
-    fclose(fp);
-
-    // clean
-    free(line);
-    free(nnz_val_str);
-
-    return M;
-}
-
 
 
 /* load matrix from binary file 
@@ -330,48 +129,6 @@ void matrix_write_to_binary_file(mat *M, char *fname){
 
 
 
-/* load vector from file 
-format:
-% comment
-num_rows
-value
-.....
-value
-*/
-vec * vector_load_from_file(char *fname){
-    int i, j, num_rows;
-    double nnz_val;
-    char *nnz_val_str;
-    char *line;
-    FILE *fp;
-    vec *v;
-
-    line = (char*)malloc(200*sizeof(char));
-    fp = fopen(fname,"r");
-    fgets(line,100,fp); //read comment
-    fgets(line,100,fp); //read dimension 
-    sscanf(line, "%d", &num_rows);
-    v = vector_new(num_rows);
-
-    // read and set elements
-    nnz_val_str = (char*)malloc(50*sizeof(char));
-    for(i=0; i<num_rows; i++){
-        fgets(line,100,fp);
-        sscanf(line, "%s", nnz_val_str);
-        nnz_val = atof(nnz_val_str);
-        vector_set_element(v, i, nnz_val);
-    }
-    fclose(fp);
-
-    // clean
-    free(line);
-    free(nnz_val_str);
-
-    return v;
-}
-
-
-
 void matrix_print(mat * M){
     int i,j;
     double val;
@@ -395,36 +152,271 @@ void vector_print(vec * v){
 }
 
 
+/* v(:) = data */
+void vector_set_data(vec *v, double *data){
+    int i;
+    #pragma omp parallel shared(v) private(i) 
+    {
+    #pragma omp for
+    for(i=0; i<(v->nrows); i++){
+        v->d[i] = data[i];
+    }
+    }
+}
 
-/* keep only upper triangular matrix part as for symmetric matrix */
-void matrix_copy_symmetric(mat *S, mat *M){
-    int i,j,n,m;
-    m = M->nrows;
-    n = M->ncols;
-    for(i=0; i<m; i++){
-        for(j=0; j<n; j++){
-            if(j>=i){
-                matrix_set_element(S,i,j,matrix_get_element(M,i,j));
-            }
+
+/* scale vector by a constant */
+void vector_scale(vec *v, double scalar){
+    int i;
+    #pragma omp parallel shared(v,scalar) private(i) 
+    {
+    #pragma omp for
+    for(i=0; i<(v->nrows); i++){
+        v->d[i] = scalar*(v->d[i]);
+    }
+    }
+}
+
+
+/* scale matrix by a constant */
+void matrix_scale(mat *M, double scalar){
+    int i;
+    #pragma omp parallel shared(M,scalar) private(i) 
+    {
+    #pragma omp for
+    for(i=0; i<((M->nrows)*(M->ncols)); i++){
+        M->d[i] = scalar*(M->d[i]);
+    }
+    }
+}
+
+
+
+
+/* copy contents of vec s to d  */
+void vector_copy(vec *d, vec *s){
+    int i;
+    //#pragma omp parallel for
+    #pragma omp parallel shared(d,s) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<(s->nrows); i++){
+        d->d[i] = s->d[i];
+    }
+    }
+}
+
+
+/* copy contents of mat S to D  */
+void matrix_copy(mat *D, mat *S){
+    int i;
+    //#pragma omp parallel for
+    #pragma omp parallel shared(D,S) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((S->nrows)*(S->ncols)); i++){
+        D->d[i] = S->d[i];
+    }
+    }
+}
+
+
+
+/* hard threshold matrix entries  */
+void matrix_hard_threshold(mat *M, double TOL){
+    int i;
+    #pragma omp parallel shared(M) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((M->nrows)*(M->ncols)); i++){
+        if(fabs(M->d[i]) < TOL){
+            M->d[i] = 0;
+        }
+    }
+    }
+}
+
+
+/* build transpose of matrix : Mt = M^T */
+void matrix_build_transpose(mat *Mt, mat *M){
+    int i,j;
+    for(i=0; i<(M->nrows); i++){
+        for(j=0; j<(M->ncols); j++){
+            matrix_set_element(Mt,j,i,matrix_get_element(M,i,j)); 
         }
     }
 }
 
 
-/* initialize diagonal matrix from vector data */
-void initialize_diagonal_matrix(mat *D, vec *data){
+
+
+
+/* subtract b from a and save result in a  */
+void vector_sub(vec *a, vec *b){
     int i;
-    for(i=0; i<(D->nrows); i++){
-        matrix_set_element(D,i,i,data->d[i]);
+    //#pragma omp parallel for
+    #pragma omp parallel shared(a,b) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<(a->nrows); i++){
+        a->d[i] = a->d[i] - b->d[i];
+    }
     }
 }
 
 
-/* invert diagonal matrix */
-void invert_diagonal_matrix(mat *Dinv, mat *D){
+/* subtract B from A and save result in A  */
+void matrix_sub(mat *A, mat *B){
     int i;
-    for(i=0; i<(D->nrows); i++){
-        matrix_set_element(Dinv,i,i,1.0/(matrix_get_element(D,i,i)));
+    //#pragma omp parallel for
+    #pragma omp parallel shared(A,B) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((A->nrows)*(A->ncols)); i++){
+        A->d[i] = A->d[i] - B->d[i];
+    }
+    }
+}
+
+
+/* A = A - u*v where u is a column vec and v is a row vec */
+void matrix_sub_column_times_row_vector(mat *A, vec *u, vec *v){
+    int i,j;
+    #pragma omp parallel for shared(A,u,v) private(j)
+    for(i=0; i<(A->nrows); i++){
+        for(j=0; j<(A->ncols); j++){
+            matrix_set_element(A,i,j,matrix_get_element(A,i,j) - vector_get_element(u,i)*vector_get_element(v,j));
+        }
+    }
+}
+
+
+/* compute euclidean norm of vector */
+double vector_get2norm(vec *v){
+    int i;
+    double val, normval = 0;
+    #pragma omp parallel shared(v,normval) private(i,val) 
+    {
+    #pragma omp for reduction(+:normval)
+    for(i=0; i<(v->nrows); i++){
+        val = v->d[i];
+        normval += val*val;
+    }
+    }
+    return sqrt(normval);
+}
+
+
+/* returns the dot product of two vectors */
+double vector_dot_product(vec *u, vec *v){
+    int i;
+    double dotval = 0;
+    #pragma omp parallel shared(u,v,dotval) private(i) 
+    {
+    #pragma omp for reduction(+:dotval)
+    for(i=0; i<u->nrows; i++){
+        dotval += (u->d[i])*(v->d[i]);
+    }
+    }
+    return dotval;
+}
+
+
+
+/* matrix frobenius norm */
+double get_matrix_frobenius_norm(mat *M){
+    int i;
+    double val, normval = 0;
+    #pragma omp parallel shared(M,normval) private(i,val) 
+    {
+    #pragma omp for reduction(+:normval)
+    for(i=0; i<((M->nrows)*(M->ncols)); i++){
+        val = M->d[i];
+        normval += val*val;
+    }
+    }
+    return sqrt(normval);
+}
+
+
+/* matrix max abs val */
+double get_matrix_max_abs_element(mat *M){
+    int i;
+    double val, max = 0;
+    for(i=0; i<((M->nrows)*(M->ncols)); i++){
+        val = M->d[i];
+        if( fabs(val) > max )
+            max = val;
+    }
+    return max;
+}
+
+
+
+/* calculate percent error between A and B 
+in terms of Frobenius norm: 100*norm(A - B)/norm(A) */
+double get_percent_error_between_two_mats(mat *A, mat *B){
+    int m,n;
+    double normA, normB, normA_minus_B;
+    mat *A_minus_B;
+    m = A->nrows;
+    n = A->ncols;
+    A_minus_B = matrix_new(m,n);
+    matrix_copy(A_minus_B, A);
+    matrix_sub(A_minus_B, B);
+    normA = get_matrix_frobenius_norm(A);
+    normB = get_matrix_frobenius_norm(B);
+    normA_minus_B = get_matrix_frobenius_norm(A_minus_B);
+    matrix_delete(A_minus_B);
+    return 100.0*normA_minus_B/normA;
+}
+
+
+double get_matrix_column_norm_squared(mat *M, int colnum){
+    int i, m, n;
+    double val,colnorm;
+    m = M->nrows;
+    n = M->ncols;
+    colnorm = 0;
+    for(i=0; i<m; i++){
+        val = matrix_get_element(M,i,colnum);
+        colnorm += val*val;
+    }
+    return colnorm;
+}
+
+
+double matrix_getmaxcolnorm(mat *M){
+    int i,m,n;
+    vec *col_vec;
+    double vecnorm, maxnorm;
+    m = M->nrows; n = M->ncols;
+    col_vec = vector_new(m);
+
+    maxnorm = 0;    
+    #pragma omp parallel for
+    for(i=0; i<n; i++){
+        matrix_get_col(M,i,col_vec);
+        vecnorm = vector_get2norm(col_vec);
+        #pragma omp critical
+        if(vecnorm > maxnorm){
+            maxnorm = vecnorm;
+        }
+    }
+
+    vector_delete(col_vec);
+    return maxnorm;
+}
+
+
+void compute_matrix_column_norms(mat *M, vec *column_norms){
+    int j;
+    #pragma omp parallel shared(column_norms,M) private(j) 
+    {
+    #pragma omp parallel for
+    for(j=0; j<(M->ncols); j++){
+        vector_set_element(column_norms,j, get_matrix_column_norm_squared(M,j)); 
+    }
     }
 }
 
@@ -448,19 +440,45 @@ void initialize_random_matrix(mat *M){
 }
 
 
-/* matrix frobenius norm */
-double get_matrix_frobenius_norm(mat *M){
+/* initialize diagonal matrix from vector data */
+void initialize_diagonal_matrix(mat *D, vec *data){
     int i;
-    double val, normval = 0;
-    #pragma omp parallel shared(M,normval) private(i,val) 
+    #pragma omp parallel shared(D) private(i)
+    { 
+    #pragma omp parallel for
+    for(i=0; i<(D->nrows); i++){
+        matrix_set_element(D,i,i,data->d[i]);
+    }
+    }
+}
+
+
+
+/* initialize identity */
+void initialize_identity_matrix(mat *D){
+    int i;
+    matrix_scale(D, 0);
+    #pragma omp parallel shared(D) private(i)
+    { 
+    #pragma omp parallel for
+    for(i=0; i<(D->nrows); i++){
+        matrix_set_element(D,i,i,1.0);
+    }
+    }
+}
+
+
+
+/* invert diagonal matrix */
+void invert_diagonal_matrix(mat *Dinv, mat *D){
+    int i;
+    #pragma omp parallel shared(D,Dinv) private(i)
     {
-    #pragma omp for reduction(+:normval)
-    for(i=0; i<((M->nrows)*(M->ncols)); i++){
-        val = M->d[i];
-        normval += val*val;
+    #pragma omp parallel for
+    for(i=0; i<(D->nrows); i++){
+        matrix_set_element(Dinv,i,i,1.0/(matrix_get_element(D,i,i)));
     }
     }
-    return sqrt(normval);
 }
 
 
@@ -470,6 +488,7 @@ void matrix_matrix_mult(mat *A, mat *B, mat *C){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
     //cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, A->nrows, B->ncols, A->ncols, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
+// cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, A->nrows, B->ncols, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
     culaDgemm('N', 'N', A->nrows, B->ncols, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
 }
 
@@ -479,6 +498,8 @@ void matrix_transpose_matrix_mult(mat *A, mat *B, mat *C){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
     //cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans, A->ncols, B->ncols, A->nrows, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
+    //cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, A->ncols, B->ncols, A->nrows, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
+
     culaDgemm('T', 'N', A->ncols, B->ncols, A->nrows, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
 }
 
@@ -492,7 +513,7 @@ void matrix_matrix_transpose_mult(mat *A, mat *B, mat *C){
 }
 
 
-/* y = M*x */
+/* y = M*x ; column major */
 void matrix_vector_mult(mat *M, vec *x, vec *y){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
@@ -501,7 +522,7 @@ void matrix_vector_mult(mat *M, vec *x, vec *y){
 }
 
 
-/* y = M^T*x */
+/* y = M^T*x ; column major */
 void matrix_transpose_vector_mult(mat *M, vec *x, vec *y){
     //gsl_blas_dgemv (CblasNoTrans, 1.0, M, x, 0.0, y);
     double alpha, beta;
@@ -511,45 +532,154 @@ void matrix_transpose_vector_mult(mat *M, vec *x, vec *y){
 }
 
 
-
-
-/* subtract b from a and save result in a  */
-void vector_sub(vec *a, vec *b){
+/* set column of matrix to vector */
+void matrix_set_col(mat *M, int j, vec *column_vec){
     int i;
-    //#pragma omp parallel for
-    #pragma omp parallel shared(a,b) private(i) 
+    #pragma omp parallel shared(column_vec,M,j) private(i) 
     {
-    #pragma omp for 
-    for(i=0; i<(a->nrows); i++){
-        a->d[i] = a->d[i] - b->d[i];
+    #pragma omp for
+    for(i=0; i<M->nrows; i++){
+        matrix_set_element(M,i,j,vector_get_element(column_vec,i));
+    }
+    }
+}
+
+
+/* extract column of a matrix into a vector */
+void matrix_get_col(mat *M, int j, vec *column_vec){
+    int i;
+    #pragma omp parallel shared(column_vec,M,j) private(i) 
+    {
+    #pragma omp parallel for
+    for(i=0; i<M->nrows; i++){ 
+        vector_set_element(column_vec,i,matrix_get_element(M,i,j));
+    }
+    }
+}
+
+
+/* extract row i of a matrix into a vector */
+void matrix_get_row(mat *M, int i, vec *row_vec){
+    int j;
+    #pragma omp parallel shared(row_vec,M,i) private(j) 
+    {
+    #pragma omp parallel for
+    for(j=0; j<M->ncols; j++){ 
+        vector_set_element(row_vec,j,matrix_get_element(M,i,j));
+    }
+    }
+}
+
+
+/* put vector row_vec as row i of a matrix */
+void matrix_set_row(mat *M, int i, vec *row_vec){
+    int j;
+    #pragma omp parallel shared(row_vec,M,i) private(j) 
+    {
+    #pragma omp parallel for
+    for(j=0; j<M->ncols; j++){ 
+        matrix_set_element(M,i,j,vector_get_element(row_vec,j));
+    }
+    }
+}
+
+
+/* Mc = M(:,inds) */
+void matrix_get_selected_columns(mat *M, int *inds, mat *Mc){
+    int i;
+    vec *col_vec; 
+    #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
+    {
+    #pragma omp parallel for
+    for(i=0; i<(Mc->ncols); i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,inds[i],col_vec);
+        matrix_set_col(Mc,i,col_vec);
+        vector_delete(col_vec);
     }
     }
 }
 
 
 
-
-/* returns the dot product of two vectors */
-double vector_dot_product(vec *u, vec *v){
+/* M(:,inds) = Mc */
+void matrix_set_selected_columns(mat *M, int *inds, mat *Mc){
     int i;
-    double dotval = 0;
-    for(i=0; i<u->nrows; i++){
-        dotval += (u->d[i])*(v->d[i]);
+    vec *col_vec; 
+    #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
+    {
+    #pragma omp parallel for
+    for(i=0; i<(Mc->ncols); i++){
+        col_vec = vector_new(M->nrows); 
+        matrix_get_col(Mc,i,col_vec);
+        matrix_set_col(M,inds[i],col_vec);
+        vector_delete(col_vec);
     }
-    return dotval;
+    }
 }
 
 
-/* subtract B from A and save result in A  */
-void matrix_sub(mat *A, mat *B){
+/* Mr = M(inds,:) */
+void matrix_get_selected_rows(mat *M, int *inds, mat *Mr){
     int i;
-    //#pragma omp parallel for
-    #pragma omp parallel shared(A,B) private(i) 
+    vec *row_vec; 
+    #pragma omp parallel shared(M,Mr,inds) private(i,row_vec) 
     {
-    #pragma omp for 
-    for(i=0; i<((A->nrows)*(A->ncols)); i++){
-        A->d[i] = A->d[i] - B->d[i];
+    #pragma omp parallel for
+    for(i=0; i<(Mr->nrows); i++){
+        row_vec = vector_new(M->ncols); 
+        matrix_get_row(M,inds[i],row_vec);
+        matrix_set_row(Mr,i,row_vec);
+        vector_delete(row_vec);
     }
+    }
+}
+
+
+/* M(inds,:) = Mr */
+void matrix_set_selected_rows(mat *M, int *inds, mat *Mr){
+    int i;
+    vec *row_vec; 
+    #pragma omp parallel shared(M,Mr,inds) private(i,row_vec) 
+    {
+    #pragma omp parallel for
+    for(i=0; i<(Mr->nrows); i++){
+        row_vec = vector_new(M->ncols); 
+        matrix_get_row(Mr,i,row_vec);
+        matrix_set_row(M,inds[i],row_vec);
+        vector_delete(row_vec);
+    }
+    }
+}
+
+
+/* copy only upper triangular matrix part as for symmetric matrix */
+void matrix_copy_symmetric(mat *S, mat *M){
+    int i,j,n,m;
+    m = M->nrows;
+    n = M->ncols;
+    for(i=0; i<m; i++){
+        for(j=0; j<n; j++){
+            if(j>=i){
+                matrix_set_element(S,i,j,matrix_get_element(M,i,j));
+            }
+        }
+    }
+}
+
+
+
+/* copy only upper triangular matrix part as for symmetric matrix */
+void matrix_keep_only_upper_triangular(mat *M){
+    int i,j,n,m;
+    m = M->nrows;
+    n = M->ncols;
+    for(i=0; i<m; i++){
+        for(j=0; j<n; j++){
+            if(j<i){
+                matrix_set_element(M,i,j,0);
+            }
+        }
     }
 }
 
@@ -606,8 +736,212 @@ void build_orthonormal_basis_from_mat(mat *A, mat *Q){
             matrix_set_col(Q, j, vj);
         }
     }
+    vector_delete(vi);
+    vector_delete(vj);
+    vector_delete(p);
 }
 
+
+/* output = input[inds] */
+void fill_vector_from_row_list(vec *input, vec *inds, vec *output){
+    int i,col_num;
+    for(i=0; i<(input->nrows); i++){
+        vector_set_element(output,i,vector_get_element(input,vector_get_element(inds,i)));
+    }
+}
+
+
+
+
+/* copy the first k rows of M into M_out where k = M_out->nrows (M_out pre-initialized) */
+void matrix_copy_first_rows(mat *M_out, mat *M){
+    int i,k;
+    k = M_out->nrows;
+    vec * row_vec;
+    for(i=0; i<k; i++){
+        row_vec = vector_new(M->ncols);
+        matrix_get_row(M,i,row_vec);
+        matrix_set_row(M_out,i,row_vec);
+        vector_delete(row_vec);
+    }
+} 
+
+
+
+/* copy the first k columns of M into M_out where k = M_out->ncols (M_out pre-initialized) */
+void matrix_copy_first_columns(mat *M_out, mat *M){
+    int i,k;
+    k = M_out->ncols;
+    vec * col_vec;
+    for(i=0; i<k; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,i,col_vec);
+        matrix_set_col(M_out,i,col_vec);
+        vector_delete(col_vec);
+    }
+} 
+
+
+/* copy contents of mat S to D */
+void matrix_copy_first_columns_with_param(mat *D, mat *S, int num_columns){
+    int i,j;
+    for(i=0; i<(S->nrows); i++){
+        for(j=0; j<num_columns; j++){
+            matrix_set_element(D,i,j,matrix_get_element(S,i,j));
+        }
+    }
+}
+
+
+
+/* copy the first k rows and columns of M into M_out is kxk where k = M_out->ncols (M_out pre-initialized) 
+M_out = M(1:k,1:k) */
+void matrix_copy_first_k_rows_and_columns(mat *M_out, mat *M){
+    int i,j,k;
+    k = M_out->ncols;
+    for(i=0; i<k; i++){
+        for(j=0; j<k; j++){
+            matrix_set_element(M_out,i,j,matrix_get_element(M,i,j));
+        }
+    }
+} 
+
+
+/* M_out = M(:,k+1:end) */
+void matrix_copy_all_rows_and_last_columns_from_indexk(mat *M_out, mat *M, int k){
+    int i,j,i_out,j_out;
+    for(i=0; i<(M->nrows); i++){
+        for(j=k; j<(M->ncols); j++){
+            i_out = i; j_out = j - k;
+            matrix_set_element(M_out,i_out,j_out,matrix_get_element(M,i,j));
+        }
+    }
+}
+
+
+void fill_matrix_from_first_rows(mat *M, int k, mat *M_k){
+    int i;
+    vec *row_vec;
+    //#pragma omp parallel shared(M,M_k,k) private(i,row_vec) 
+    {
+    //#pragma omp for
+    for(i=0; i<k; i++){
+        row_vec = vector_new(M->ncols);
+        matrix_get_row(M,i,row_vec);
+        matrix_set_row(M_k,i,row_vec);
+        vector_delete(row_vec);
+    }
+    }
+}
+
+
+void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
+    int i;
+    vec *col_vec;
+    //#pragma omp parallel shared(M,M_k,k) private(i,col_vec) 
+    {
+    //#pragma omp for
+    for(i=0; i<k; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,i,col_vec);
+        matrix_set_col(M_k,i,col_vec);
+        vector_delete(col_vec);
+    }
+    }
+}
+
+
+void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
+    int i,ind;
+    vec *col_vec;
+    ind = 0;
+    for(i=k; i<M->ncols; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,i,col_vec);
+        matrix_set_col(M_k,ind,col_vec);
+        vector_delete(col_vec);
+        ind++;
+    }
+}
+
+
+/* Mout = M((k+1):end,(k+1):end) in matlab notation */
+void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out){
+    int i,j,i_out,j_out;
+    for(i=k; i<M->nrows; i++){
+        for(j=k; j<M->ncols; j++){
+            i_out = i-k;
+            j_out = j-k;
+            //printf("setting element %d, %d of M_out\n", i_out, j_out);
+            matrix_set_element(M_out,i_out,j_out,matrix_get_element(M,i,j));
+        }
+    }
+}
+
+
+/* append matrices side by side: C = [A, B] */
+void append_matrices_horizontally(mat *A, mat *B, mat *C){
+    int i,j;
+
+    #pragma omp parallel shared(C,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((A->nrows)*(A->ncols)); i++){
+        C->d[i] = A->d[i];
+    }
+    }
+
+    #pragma omp parallel shared(C,B,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<((B->nrows)*(B->ncols)); i++){
+        C->d[i + (A->nrows)*(A->ncols)] = B->d[i];
+    }
+    }
+
+    /* 
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,i,A->ncols + j,matrix_get_element(B,i,j));
+        }
+    }*/
+}
+
+
+
+/* append matrices vertically: C = [A; B] */
+void append_matrices_vertically(mat *A, mat *B, mat *C){
+    int i,j;
+
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
+        }
+    }
+}
+
+
+
+
+/* compute evals and evecs of symmetric matrix M
+   matrix S must be symmetric
+*/
+void compute_evals_and_evecs_of_symm_matrix(mat *S, vec *evals){
+    //LAPACKE_dsyev( LAPACK_ROW_MAJOR, 'V', 'U', S->nrows, S->d, S->nrows, evals->d);
+    culaDsyev('V', 'U', S->nrows, S->d, S->ncols, evals->d);
+}
 
 
 /* Performs [Q,R] = qr(M,'0') compact QR factorization 
@@ -663,22 +997,13 @@ void QR_factorization_getQ(mat *M, mat *Q){
 
 
 
-/* compute evals and evecs of symmetric matrix M
-   matrix S must be symmetric
-*/
-void compute_evals_and_evecs_of_symm_matrix(mat *S, vec *evals){
-    //LAPACKE_dsyev( LAPACK_ROW_MAJOR, 'V', 'U', S->nrows, S->d, S->nrows, evals->d);
-    culaDsyev('V', 'U', S->nrows, S->d, S->ncols, evals->d);
-}
-
-
-
-/* computes SVD: M = U*S*V^T; note Vt is V transposed */
+/* computes SVD: M = U*S*V^T; note Vt = V^T */
 void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
     int m,n,k;
     m = M->nrows; n = M->ncols;
     k = min(m,n);
     vec * svals = vector_new(k);
+    //LAPACKE_dgesvd( LAPACK_COL_MAJOR, 'S', 'S', m, n, M->d, m, svals->d, U->d, m, Vt->d, k, work->d );
     culaDgesvd('S', 'S', m, n, M->d, m, svals->d, U->d, m, Vt->d, k);
     initialize_diagonal_matrix(S, svals);
     vector_delete(svals);
@@ -686,7 +1011,6 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
 
 
 
-/* P = U*S*V^T */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
     int k,m,n;
     double alpha, beta;
@@ -701,93 +1025,6 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 
     // form P = U*S*V^T
     matrix_matrix_mult(U,SVt,P);
-}
-
-
-/* append matrices side by side: C = [A, B] */
-void append_matrices_horizontally(mat *A, mat *B, mat *C){
-    int i,j;
-
-    #pragma omp parallel shared(C,A) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<((A->nrows)*(A->ncols)); i++){
-        C->d[i] = A->d[i];
-    }
-    }
-
-    #pragma omp parallel shared(C,B,A) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<((B->nrows)*(B->ncols)); i++){
-        C->d[i + (A->nrows)*(A->ncols)] = B->d[i];
-    }
-    }
-
-   /* for(i=0; i<A->nrows; i++){
-        for(j=0; j<A->ncols; j++){
-            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
-        }
-    }
-
-    for(i=0; i<B->nrows; i++){
-        for(j=0; j<B->ncols; j++){
-            matrix_set_element(C,i,A->ncols + j,matrix_get_element(B,i,j));
-        }
-    }*/
-}
-
-
-
-/* append matrices vertically: C = [A; B] */
-void append_matrices_vertically(mat *A, mat *B, mat *C){
-    int i,j;
-
-    for(i=0; i<A->nrows; i++){
-        for(j=0; j<A->ncols; j++){
-            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
-        }
-    }
-
-    for(i=0; i<B->nrows; i++){
-        for(j=0; j<B->ncols; j++){
-            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
-        }
-    }
-}
-
-
-
-
-
-/* calculate percent error between A and B: 100*norm(A - B)/norm(A) */
-double get_percent_error_between_two_mats(mat *A, mat *B){
-    int m,n;
-    double normA, normB, normA_minus_B;
-    m = A->nrows;
-    n = A->ncols;
-    mat *A_minus_B = matrix_new(m,n);
-    matrix_copy(A_minus_B, A);
-    matrix_sub(A_minus_B, B);
-    normA = get_matrix_frobenius_norm(A);
-    normB = get_matrix_frobenius_norm(B);
-    normA_minus_B = get_matrix_frobenius_norm(A_minus_B);
-    return 100.0*normA_minus_B/normA;
-}
-
-
-void checkStatus(culaStatus status)
-{
-    char buf[256];
-
-    if(!status)
-        return;
-
-    culaGetErrorInfoString(status, culaGetErrorInfo(), buf, sizeof(buf));
-    printf("%s\n", buf);
-
-    culaShutdown();
-    exit(EXIT_FAILURE);
 }
 
 
@@ -823,7 +1060,6 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
 
     printf("estimate rank with TOL = %f..\n", TOL);
     *good_rank = maxdim;
-    //for(ind=0; ind<num_ortos; ind++){
     int forbreak = 0;
     for(j=0; !forbreak && j<maxdim; j++){
         matrix_get_col(Qbig, j, vj);
@@ -842,7 +1078,6 @@ void estimate_rank_and_buildQ(mat *M, double frac_of_max_rank, double TOL, mat *
         vector_scale(vj, 1.0/vec_norm);
         matrix_set_col(Qbig, j, vj);
     }
-    //}
 
     printf("estimated rank = %d\n", *good_rank);
     Qsmall = matrix_new(m, *good_rank);
@@ -921,5 +1156,21 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
             exit_loop = 1;
         }    
     }
+}
+
+
+/* cula error status */
+void checkStatus(culaStatus status)
+{
+    char buf[256];
+
+    if(!status)
+        return;
+
+    culaGetErrorInfoString(status, culaGetErrorInfo(), buf, sizeof(buf));
+    printf("%s\n", buf);
+
+    culaShutdown();
+    exit(EXIT_FAILURE);
 }
 
