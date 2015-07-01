@@ -1174,3 +1174,11 @@ void checkStatus(culaStatus status)
     exit(EXIT_FAILURE);
 }
 
+
+double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval){
+    long secs_used, micros_used;
+    secs_used=(end_timeval.tv_sec - start_timeval.tv_sec);
+    micros_used= ((secs_used*1000000) + end_timeval.tv_usec) - (start_timeval.tv_usec);
+    return (micros_used/1e6); 
+}
+

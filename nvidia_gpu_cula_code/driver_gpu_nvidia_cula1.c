@@ -1,7 +1,7 @@
 /*
  * cula gpu code with host openmp 
  */
-#include "low_rank_svd_algorithms_nvidia_cula.h"
+#include "rank_revealing_algorithms_nvidia_cula.h"
 
 
 int main(int argc, char** argv){

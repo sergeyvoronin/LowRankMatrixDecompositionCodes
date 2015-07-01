@@ -14,11 +14,12 @@ For more detailed information on the implemented algorithms see:
 http://arxiv.org/abs/1502.05366
 http://arxiv.org/abs/1503.07157
 
-See the included pdf file (in description/ folder) for a more detailed description. There are three codes: for single processor (with GNU GSL), multiprocessor 
+There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 A simple implementation in Matlab (or Octave) is also provided for 
-illustration purposes. The QB algorithms are currently implemented only with 
-the multi-core Intel MKL version but will be expanded to other architectures.
+illustration purposes. The QB algorithms are currently implemented with 
+the multi-core Intel MKL version and a portion with the CUDA/CULA version, 
+but this collection will be expanded.
 
 Written by Sergey Voronin, 2014-2015 as part of a collaborative project with Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18
@@ -69,10 +70,12 @@ Each of the codes also has three autorank functions based on version II and III
 of the randomized algorithm, for use when a good rank k to use is not known in advance.
 Thus, there is a total of 6 functions for computing the low rank SVD.
 
-Additionally, for the multi-core architecture the following algorithms 
+Additionally, for the multi-core and GPU architectures the following algorithms 
 are also available:
-full column pivoted QR, partial column pivoted QR, single vector randQB with
-power method, and blocked randQB with power method
+full column pivoted QR from lapack (only for multi-core), 
+partial column pivoted QR (using householder reflectors), 
+single vector randQB with power method, and 
+blocked randQB with power method.
 
 Sample calling procedure for the rsvd algorithms is as follows 
 (similar for all 3 architectures).
