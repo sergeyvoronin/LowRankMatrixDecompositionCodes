@@ -1,5 +1,4 @@
 #!/bin/bash
-# https://software.intel.com/en-us/articles/opm-abort-initializing-libguide40dll/
 KMP_DUPLICATE_LIB_OK=TRUE
 
 export PATH=$PATH:/usr/local/cuda-6.0/bin/
