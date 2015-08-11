@@ -18,8 +18,10 @@ There are three codes: for single processor (with GNU GSL), multiprocessor
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 A simple implementation in Matlab (or Octave) is also provided for 
 illustration purposes. The QB algorithms are currently implemented with 
-the multi-core Intel MKL version and a portion with the CUDA/CULA version, 
-but this collection will be expanded.
+the multi-core Intel MKL version and with the CUDA/CULA version.
+
+In addition, experimental Matlab mex-file support for the multi-core and 
+GPU C codes is available.
 
 Written by Sergey Voronin, 2014-2015 as part of a collaborative project with Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18

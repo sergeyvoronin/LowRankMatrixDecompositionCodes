@@ -1,0 +1,18 @@
+Experimental Matlab mex support for NVIDIA GPU CULA code
+
+Allows one to call the rsvd functions from a mex-file interface. I.e. :
+
+$ source setup_vars.sh
+$ ./compile.sh
+$ matlab -nodesktop 
+>> A = randn(2000,5000);
+>> k = 1900;
+>> [U,S,V] = rsvd_cula_mex_interface1(A,k);
+>> norm(A - U*S*V')/norm(A)
+
+Important: setup_vars.sh must be sourced in shell from which matlab is called. 
+compile.sh and setup_vars.sh must be modified to reflect system settings 
+(i.e. path to matlab, cuda/cula, etc). 
+The interface between CUDA/CULA code and matlab mex may not be stable. 
+Adjustments may be needed for different software versions. Tested 
+with Matlab R2015a, cula R18, cuda 6.5.    

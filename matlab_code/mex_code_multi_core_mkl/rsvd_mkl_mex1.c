@@ -106,10 +106,11 @@ void mexFunction( int nlhs, mxArray *plhs[],
 
     // delete and exit
     matrix_delete(M);
+    matrix_delete(U);
+    matrix_delete(S);
+    matrix_delete(V);
+
     if(verbose){
-        matrix_delete(U);
-        matrix_delete(S);
-        matrix_delete(V);
         matrix_delete(P);
     }
 

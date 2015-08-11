@@ -281,7 +281,7 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
     Yorth = matrix_new(m,k);
     Zorth = matrix_new(n,k);
     for(j=1; j<q; j++){
-        printf("in loop for j=%d of %d\n", j, q);
+        printf("in loop for j=%d of %d\n", j, q-1);
 
         if((2*j-2) % s == 0){
             printf("orthogonalize Y..\n");
