@@ -37,11 +37,8 @@ void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V){
     mat *B = matrix_new(k,n);
     matrix_transpose_matrix_mult(Q,M,B);
 
-    mat *Bt = matrix_new(n,k);
-    matrix_transpose_matrix_mult(M,Q,Bt);    
-
     mat *BBt = matrix_new(k,k);
-    matrix_matrix_mult(B,Bt,BBt);    
+    matrix_matrix_transpose_mult(B,B,BBt);    
 
     // compute eigendecomposition of BBt
     printf("eigendecompose BBt..\n");
@@ -70,14 +67,14 @@ void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V){
     mat *UhatSinv = matrix_new(k,k);
     invert_diagonal_matrix(Sinv,*S);
     matrix_matrix_mult(Uhat,Sinv,UhatSinv);
-    matrix_matrix_mult(Bt,UhatSinv,*V);
+    matrix_transpose_matrix_mult(B,UhatSinv,*V);
 
     // clean up
     matrix_delete(RN);
     matrix_delete(Y);
     matrix_delete(Q);
     matrix_delete(B);
-    matrix_delete(Bt);
+    matrix_delete(BBt);
     matrix_delete(Sinv);
     matrix_delete(UhatSinv);
 }
@@ -262,10 +259,9 @@ void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat 
     int i,j,m,n,knew;
     double val;
     m = M->nrows; n = M->ncols;
-    mat *Q, *B, *Bt, *BBt;
+    mat *Q, *B, *BBt;
 
     printf("running randomized_low_rank_svd4 with kstep = %d, nstep = %d, q = %d\n", kstep, nstep, q);
-
     
     // setup mats
     knew = kstep*nstep;
@@ -312,8 +308,11 @@ void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat 
     matrix_delete(Q);
     matrix_delete(B);
     matrix_delete(BBt);
+    matrix_delete(Uhat);
     matrix_delete(Sinv);
     matrix_delete(UhatSinv);
+    vector_delete(evals);
+    vector_delete(singvals);
 }
 
 
