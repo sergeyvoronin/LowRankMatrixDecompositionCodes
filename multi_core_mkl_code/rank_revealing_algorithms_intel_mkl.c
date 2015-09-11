@@ -256,6 +256,67 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
 }
 
 
+/* computes the approximate low rank SVD of rank k of matrix M using the 
+QB blocked algorithm for Q and BBt method */
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V){
+    int i,j,m,n,knew;
+    double val;
+    m = M->nrows; n = M->ncols;
+    mat *Q, *B, *Bt, *BBt;
+
+    printf("running randomized_low_rank_svd4 with kstep = %d, nstep = %d, q = %d\n", kstep, nstep, q);
+
+    
+    // setup mats
+    knew = kstep*nstep;
+    *U = matrix_new(m,knew);
+    *S = matrix_new(knew,knew);
+    *V = matrix_new(n,knew);
+
+    printf("calling randQB with kstep = %d and nstep = %d and q = %d\n", kstep, nstep, q);
+    randQB_pb(M, kstep, nstep, q, &Q, &B);
+
+    BBt = matrix_new(knew,knew);
+    matrix_matrix_transpose_mult(B,B,BBt); 
+
+    // compute eigendecomposition of BBt
+    printf("eigendecompose BBt..\n");
+    vec *evals = vector_new(knew);
+    mat *Uhat = matrix_new(knew, knew);
+    matrix_copy_symmetric(Uhat,BBt);
+    compute_evals_and_evecs_of_symm_matrix(Uhat, evals);
+
+    // compute singular values and matrix Sigma
+    printf("form S..\n");
+    vec *singvals = vector_new(knew);
+    for(i=0; i<knew; i++){
+        vector_set_element(singvals,i,sqrt(vector_get_element(evals,i)));
+    }
+    initialize_diagonal_matrix(*S, singvals);
+    
+    // compute U = Q*Uhat mxk * kxk = mxk  
+    printf("form U..\n");
+    matrix_matrix_mult(Q,Uhat,*U);
+
+    // compute nxk V 
+    // V = B^T Uhat * Sigma^{-1}
+    printf("form V..\n");
+    mat *Sinv = matrix_new(knew,knew);
+    mat *UhatSinv = matrix_new(knew,knew);
+    invert_diagonal_matrix(Sinv,*S);
+    matrix_matrix_mult(Uhat,Sinv,UhatSinv);
+    matrix_transpose_matrix_mult(B,UhatSinv,*V);
+
+    // clean up
+    printf("clean up..\n");
+    matrix_delete(Q);
+    matrix_delete(B);
+    matrix_delete(BBt);
+    matrix_delete(Sinv);
+    matrix_delete(UhatSinv);
+}
+
+
 /* computes the approximate low rank SVD of rank k of matrix M using QR version 
 automatically estimates the rank needed */
 void randomized_low_rank_svd2_autorank1(mat *M, double frac_of_max_rank, double TOL, mat **U, mat **S, mat **V){
@@ -932,4 +993,128 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
     matrix_delete(AtQp);
     matrix_delete(AtQp2);
 }
+
+
+/* solve A X = B where A is upper triangular matrix and X is a matrix 
+invert different ways
+1. using tridiagonal matrix system solve
+2. using inverse of tridiagonal matrix solve
+3. Use SVD of A to compute inverse 
+default: solve column by column with tridiagonal system
+*/
+/*void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type){
+    int j;
+    double alpha = 1.0;
+    vec *col_vec;
+    mat *S;
+
+    //printf("A is %d by %d\n", A->nrows, A->ncols);
+    //printf("X is %d by %d\n", X->nrows, X->ncols);
+    //printf("B is %d by %d\n", B->nrows, B->ncols);
+
+    if(solve_type == 1){
+        S = matrix_new(B->nrows,B->ncols);
+        matrix_copy(S,B);
+        cblas_dtrsm(CblasColMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, B->nrows, B->ncols, alpha, A->d, A->nrows, S->d, S->nrows);
+        matrix_copy(X,S);
+        matrix_delete(S);
+    }
+    else if(solve_type == 2){
+        invert_upper_triangular_matrix(A);
+        matrix_matrix_mult(A,B,X);
+    }
+    else if(solve_type == 3){
+        mat *U, *S, *Sinv, *Vt, *SinvUt, *VSinvUt;
+        U = matrix_new(A->nrows, A->nrows);
+        S = matrix_new(A->nrows, A->nrows);
+        Sinv = matrix_new(A->nrows, A->nrows);
+        Vt = matrix_new(A->nrows, A->nrows);
+        SinvUt = matrix_new(A->nrows, A->nrows);
+        VSinvUt = matrix_new(A->nrows, A->nrows);
+        singular_value_decomposition(A, &U, &S, &Vt);
+        invert_diagonal_matrix(Sinv,S);
+        matrix_matrix_transpose_mult(Sinv,U,SinvUt); 
+        matrix_transpose_matrix_mult(Vt,SinvUt,VSinvUt);
+        matrix_matrix_mult(VSinvUt, B, X);
+    }
+    else{
+        col_vec = vector_new(B->nrows);
+        for(j=0; j<B->ncols; j++){
+            matrix_get_col(B,j,col_vec);
+            cblas_dtrsv (CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, A->ncols, A->d, A->ncols, col_vec->d, 1);
+            matrix_set_col(X,j,col_vec);     
+        }
+        vector_delete(col_vec);
+    }
+}*/
+
+
+/* computes the approximate ID decomposition of a matrix of specified rank 
+: [I,T] = id_decomp_fixed_rank(M,k) 
+where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
+void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T){
+    int i,j,frankQR,ind,m,n;
+    mat *Qk, *Rk, *Rk1, *Rk2, *invRk1, *P;
+    m = M->nrows;
+    n = M->ncols;
+    FILE *fp;
+
+    /* 
+        [Qk,Rk,P,I] = qr_with_column_pivoting_fixed_rank(A,k);
+        Rk1 = Rk(:,1:k);
+        Rk2 = Rk(:,(k+1):end);
+    */
+    pivoted_QR_of_specified_rank(M, k, &frankQR, &Qk, &Rk, I);
+
+    Rk1 = matrix_new(frankQR,frankQR);
+    Rk2 = matrix_new(frankQR,n-frankQR);
+    fill_matrix_from_first_columns(Rk, frankQR, Rk1);
+    fill_matrix_from_last_columns(Rk, frankQR, Rk2);
+
+    *T = matrix_new(Rk2->nrows,Rk2->ncols);
+
+    // NOTE: must enforce Rk1 to be symmetric before inverting..
+    // %Rk1*T = Rk2
+    matrix_keep_only_upper_triangular(Rk1);
+    upper_triangular_system_solve(Rk1,Rk2,*T,1);
+}
+
+
+/* evaluate approximation to M using supplied ID of rank k */
+/*
+void use_id_decomp_for_approximation(mat *M, mat *T, mat *P, vec *I, int k){
+    mat *Tt, *Ik, *U1, *U, *MI, *MA;
+    int m,n;
+    
+    m = M->nrows; n = M->ncols;
+
+    printf("norm(T,fro) = %f\n", get_matrix_frobenius_norm(T));
+    printf("norm(T,max) = %f\n", get_matrix_max_abs_element(T));
+    
+    Tt = matrix_new(T->ncols,T->nrows);
+    matrix_build_transpose(Tt,T);
+    //printf("norm(Tt,fro) = %f\n", get_matrix_frobenius_norm(Tt));
+
+    Ik = matrix_new(k,k);
+    initialize_identity_matrix(Ik);
+    //printf("norm(Ik,fro) = %f\n", get_matrix_frobenius_norm(Ik));
+
+    U1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,U1);
+
+    U = matrix_new(P->nrows,U1->ncols);
+    matrix_matrix_mult(P,U1,U);
+
+    // MI = M(:,I(1:k)); 
+    MI = matrix_new(M->nrows,k);
+    fill_matrix_from_column_list(M, I, MI);
+
+    MA = matrix_new(m,n);
+    matrix_matrix_transpose_mult(MI,U,MA);
+
+    printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
+    printf("norm(MA,fro) = %f\n", get_matrix_frobenius_norm(MA));
+    printf("percent error = %f\n", get_percent_error_between_two_mats(M,MA));
+}
+*/
 

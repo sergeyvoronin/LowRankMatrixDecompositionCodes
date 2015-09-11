@@ -67,10 +67,12 @@ Once the matrix is made one can use any of the drivers to compute the low
 rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols) 
 or the tolerance parameter if one of the autorank methods is used.
 
-One can call either algorithm I,II, or III for computing the low rank SVD with each driver.
+One can call either algorithm I,II,III, or IV for computing the low rank SVD with 
+each driver.
 Each of the codes also has three autorank functions based on version II and III 
 of the randomized algorithm, for use when a good rank k to use is not known in advance.
-Thus, there is a total of 6 functions for computing the low rank SVD.
+Thus, there is a total of 6 functions for computing the low rank SVD. Algorithm IV 
+is block based and uses the QB algorithm to construct Q instead of QR.
 
 Additionally, for the multi-core and GPU architectures the following algorithms 
 are also available:
@@ -99,6 +101,7 @@ k = 300;
 randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
 randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
+randomized_low_rank_svd4(M, kblocksize, numblocks, q, &U, &S, &V);
 randomized_low_rank_svd2_autorank1(M, frac, TOL, &U, &S, &V);
 randomized_low_rank_svd2_autorank2(M, kblocksize, TOL, &U, &S, &V);
 randomized_low_rank_svd3_autorank2(M, kblocksize, TOL, q, s, &U, &S, &V);
@@ -151,3 +154,16 @@ normM = 180.600893 ; normU = 31.622777 ; normS = 176.342348 ; normV = 31.622777 
 percent_error between M and U S V^T = 21.587897
 $
 
+Example run with Matlab Mex Interface of GPU code (run C GPU code inside of Matlab)
+
+$ cd matlab_code/mex_code_nvidia_gpu_cula/
+$ source setup_vars.sh
+$ ./compile_mex.sh
+$ matlab -nodesktop
+>> A = randn(2000,5000);
+>> k = 1900;
+>> [U,S,V] = rsvd_cula_mex_interface1(A,k);
+>> norm(A - U*S*V')/norm(A)
+>> k = 2000;
+>> [U,S,V] = rsvd_cula_mex_interface2(A,500,4,2);
+>> norm(A - U*S*V')/norm(A)

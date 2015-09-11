@@ -204,6 +204,9 @@ void initialize_identity_matrix(mat *D);
 void invert_diagonal_matrix(mat *Dinv, mat *D);
 
 
+/* overwrites supplied upper triangular matrix by its inverse */
+void invert_upper_triangular_matrix(mat *Minv);
+
 
 /* returns the dot product of two vectors */
 double vector_dot_product(vec *u, vec *v);
@@ -312,7 +315,9 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
 
+/* solve A X = B with A upper triangular */
+void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+
 /* get seconds for recording runtime */
 double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval);
-
 

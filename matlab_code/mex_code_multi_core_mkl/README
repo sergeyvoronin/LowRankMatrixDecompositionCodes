@@ -4,18 +4,24 @@ Allows one to call the rsvd functions from a mex-file interface. I.e. in
 bash shell:
 
 $ source setup_vars.sh
-$ ./compile.sh
+$ ./compile_mex.sh
+
+then run matlab and use one of the provided interface functions:
+
 $ matlab -nodesktop 
 >> A = randn(2000,5000);
 >> k = 1900;
 >> [U,S,V] = rsvd_mkl_mex_interface1(A,k);
 >> norm(A - U*S*V')/norm(A)
+>> k = 2000;
+>> [U,S,V] = rsvd_mkl_mex_interface2(A,100,20,2);
+>> norm(A - U*S*V')/norm(A) 
 
 Important: setup_vars.sh must be sourced in shell from which matlab is called. 
 compile_mex.sh and setup_vars.sh must be modified to reflect system settings 
 (i.e. path to matlab, icc/mkl, etc). 
 MKL likely needs to be warmed up prior to SVD call as done 
 in rsvd_mex_interface1.m script, otherwise a crash 
-may occur. The interface between MKL code with OpenMP and Matlab mex is 
-generally not stable. Adjustments may be needed for different software versions. 
+may occur. The interface between MKL code with OpenMP and Matlab mex may  
+not be stable. Adjustments may be needed for different software versions. 
 Tested with Matlab R2015a, icc 14.0.3.    

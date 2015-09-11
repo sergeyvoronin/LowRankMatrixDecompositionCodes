@@ -19,6 +19,11 @@ void randomized_low_rank_svd3_old(mat *M, int k, int q, mat **U, mat **S, mat **
 void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat **V);
 
 
+/* computes the approximate low rank SVD of rank k of matrix M using the 
+QB blocked algorithm for Q and BBt method; desired k \approx kstep*nstep */
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V);
+
+
 /* version 2 of ramdomized low rank SVD with autorank estimation 1 */
 void randomized_low_rank_svd2_autorank1(mat *M, double frac_of_max_rank, double TOL, mat **U, mat **S, mat **V);
 

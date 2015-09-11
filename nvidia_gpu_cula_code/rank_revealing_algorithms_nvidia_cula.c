@@ -354,6 +354,67 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
 }
 
 
+/* computes the approximate low rank SVD of rank k of matrix M using the 
+QB blocked algorithm for Q and BBt method */
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V){
+    int i,j,m,n,knew;
+    double val;
+    m = M->nrows; n = M->ncols;
+    mat *Q, *B, *Bt, *BBt;
+
+    printf("running randomized_low_rank_svd4 with kstep = %d, nstep = %d, q = %d\n", kstep, nstep, q);
+
+    
+    // setup mats
+    knew = kstep*nstep;
+    *U = matrix_new(m,knew);
+    *S = matrix_new(knew,knew);
+    *V = matrix_new(n,knew);
+
+    printf("calling randQB with kstep = %d and nstep = %d and q = %d\n", kstep, nstep, q);
+    randQB_pb(M, kstep, nstep, q, &Q, &B);
+
+    BBt = matrix_new(knew,knew);
+    matrix_matrix_transpose_mult(B,B,BBt); 
+
+    // compute eigendecomposition of BBt
+    printf("eigendecompose BBt..\n");
+    vec *evals = vector_new(knew);
+    mat *Uhat = matrix_new(knew, knew);
+    matrix_copy_symmetric(Uhat,BBt);
+    compute_evals_and_evecs_of_symm_matrix(Uhat, evals);
+
+    // compute singular values and matrix Sigma
+    printf("form S..\n");
+    vec *singvals = vector_new(knew);
+    for(i=0; i<knew; i++){
+        vector_set_element(singvals,i,sqrt(vector_get_element(evals,i)));
+    }
+    initialize_diagonal_matrix(*S, singvals);
+    
+    // compute U = Q*Uhat mxk * kxk = mxk  
+    printf("form U..\n");
+    matrix_matrix_mult(Q,Uhat,*U);
+
+    // compute nxk V 
+    // V = B^T Uhat * Sigma^{-1}
+    printf("form V..\n");
+    mat *Sinv = matrix_new(knew,knew);
+    mat *UhatSinv = matrix_new(knew,knew);
+    invert_diagonal_matrix(Sinv,*S);
+    matrix_matrix_mult(Uhat,Sinv,UhatSinv);
+    matrix_transpose_matrix_mult(B,UhatSinv,*V);
+
+    // clean up
+    printf("clean up..\n");
+    matrix_delete(Q);
+    matrix_delete(B);
+    matrix_delete(BBt);
+    matrix_delete(Sinv);
+    matrix_delete(UhatSinv);
+}
+
+
 
 /* computes the approximate low rank SVD of rank k of matrix M using QR version 
 automatically estimates the rank needed */

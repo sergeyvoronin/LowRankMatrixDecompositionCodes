@@ -9,7 +9,7 @@ int main(int argc, char** argv){
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat_6kx12k.bin";
+    char *M_file = "../data/A_mat_2kx4k.bin";
     //char *M_file = "../data/A_mat_5kx2k.bin";
 
     culaStatus status;
@@ -30,18 +30,16 @@ int main(int argc, char** argv){
 
     // now test low rank SVD of M..
     k = 1000;
-    U = matrix_new(m,k);
-    S = matrix_new(k,k);
-    V = matrix_new(n,k);
     
     printf("calling random SVD..\n");
     time(&start_time);
     //randomized_low_rank_svd1(M, k, U, S, V);
     //randomized_low_rank_svd2(M, k, U, S, V);
     //randomized_low_rank_svd3(M, k, 10, 1, U, S, V);
+    randomized_low_rank_svd4(M, 100, round(k/100), 2, &U, &S, &V);
     //randomized_low_rank_svd2_autorank1(M, 0.5, 0.005, &U, &S, &V);
     //randomized_low_rank_svd2_autorank2(M, 200, 0.5, &U, &S, &V);
-    randomized_low_rank_svd3_autorank2(M, 400, 0.5, 5, 1, &U, &S, &V);
+    //randomized_low_rank_svd3_autorank2(M, 400, 0.5, 5, 1, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 

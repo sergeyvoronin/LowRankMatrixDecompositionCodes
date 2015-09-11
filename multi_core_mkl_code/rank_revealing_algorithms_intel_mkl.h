@@ -13,6 +13,10 @@ void randomized_low_rank_svd2(mat *M, int k, mat **U, mat **S, mat **V);
  * with range sampling via (M M^T)^q M R*/
 void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat **V);
 
+/* computes the approximate low rank SVD of rank k of matrix M using the 
+QB blocked algorithm for Q and BBt method */
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V);
+
 
 /* version 2 of ramdomized low rank SVD with autorank estimation 1 */
 void randomized_low_rank_svd2_autorank1(mat *M, double frac_of_max_rank, double TOL, mat **U, mat **S, mat **V);
@@ -40,4 +44,22 @@ void randQB_p(mat *M, int k, int p, mat **Q, mat **B);
 
 /* randQB algorithm blocked */
 void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B);
+
+/* solve A X = B where A is upper triangular matrix and X is a matrix 
+invert different ways
+1. using tridiagonal matrix system solve
+2. using inverse of tridiagonal matrix solve
+3. Use SVD of A to compute inverse 
+default: solve column by column with tridiagonal system
+*/
+void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+
+
+/* computes the approximate ID decomposition of a matrix of specified rank 
+: [I,T] = id_decomp_fixed_rank(M,k) 
+where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
+void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T);
+ 
+/* evaluate approximation to M using supplied ID of rank k */
+//void use_id_decomp_for_approximation(mat *M, mat *T, mat *P, vec *I, int k);
 

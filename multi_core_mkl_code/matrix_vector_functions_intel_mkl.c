@@ -498,8 +498,10 @@ void invert_diagonal_matrix(mat *Dinv, mat *D){
 }
 
 
-
-
+/* overwrites supplied upper triangular matrix by its inverse */
+void invert_upper_triangular_matrix(mat *Minv){
+    LAPACKE_dtrtri( LAPACK_COL_MAJOR, 'U', 'N', Minv->nrows, Minv->d, Minv->nrows);
+}
 
 
 /* C = A*B ; column major */
@@ -1235,6 +1237,61 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
             matrix_delete(RN);
             exit_loop = 1;
         }    
+    }
+}
+
+
+/* solve A X = B where A is upper triangular matrix and X is a matrix 
+invert different ways
+1. using tridiagonal matrix system solve
+2. using inverse of tridiagonal matrix solve
+3. Use SVD of A to compute inverse 
+default: solve column by column with tridiagonal system
+*/
+void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type){
+    int j;
+    double alpha = 1.0;
+    vec *col_vec;
+    mat *S;
+
+    //printf("A is %d by %d\n", A->nrows, A->ncols);
+    //printf("X is %d by %d\n", X->nrows, X->ncols);
+    //printf("B is %d by %d\n", B->nrows, B->ncols);
+
+    if(solve_type == 1){
+        S = matrix_new(B->nrows,B->ncols);
+        matrix_copy(S,B);
+        cblas_dtrsm(CblasColMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, B->nrows, B->ncols, alpha, A->d, A->nrows, S->d, S->nrows);
+        matrix_copy(X,S);
+        matrix_delete(S);
+    }
+    else if(solve_type == 2){
+        invert_upper_triangular_matrix(A);
+        matrix_matrix_mult(A,B,X);
+    }
+    else if(solve_type == 3){
+        mat *U, *S, *Sinv, *Vt, *SinvUt, *VSinvUt;
+        U = matrix_new(A->nrows, A->nrows);
+        S = matrix_new(A->nrows, A->nrows);
+        Sinv = matrix_new(A->nrows, A->nrows);
+        Vt = matrix_new(A->nrows, A->nrows);
+        SinvUt = matrix_new(A->nrows, A->nrows);
+        VSinvUt = matrix_new(A->nrows, A->nrows);
+        //singular_value_decomposition(A, &U, &S, &Vt);
+        singular_value_decomposition(A, U, S, Vt);
+        invert_diagonal_matrix(Sinv,S);
+        matrix_matrix_transpose_mult(Sinv,U,SinvUt); 
+        matrix_transpose_matrix_mult(Vt,SinvUt,VSinvUt);
+        matrix_matrix_mult(VSinvUt, B, X);
+    }
+    else{
+        col_vec = vector_new(B->nrows);
+        for(j=0; j<B->ncols; j++){
+            matrix_get_col(B,j,col_vec);
+            cblas_dtrsv (CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, A->ncols, A->d, A->ncols, col_vec->d, 1);
+            matrix_set_col(X,j,col_vec);     
+        }
+        vector_delete(col_vec);
     }
 }
 
