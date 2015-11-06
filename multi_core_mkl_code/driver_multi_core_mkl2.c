@@ -44,7 +44,8 @@ int main()
     
 
     // run all algs for these nxn matrix sizes
-    for(n = 5000; n<=5000; n+=1000){
+    //for(n = 5000; n<=5000; n+=1000){
+    for(n = 2000; n<=2000; n+=1000){
 
         printf("======= n = %d =========\n", n);
         elapsed_secsQR1_sum = 0;
@@ -137,7 +138,6 @@ int main()
             printf("percent_error between M and QkRkPt = %f\n", percent_error);    
             printf("QR elapsed time: about %4.4f seconds\n", get_seconds_frac(start_timeval,end_timeval));
             matrix_delete(Qk); matrix_delete(Rk); vector_delete(I);
-
 
 
 

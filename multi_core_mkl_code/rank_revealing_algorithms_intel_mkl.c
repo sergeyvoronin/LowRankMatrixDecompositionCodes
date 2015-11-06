@@ -769,6 +769,8 @@ void pivoted_QR_of_specified_rank(mat *M, int k, int *frank, mat **Qk, mat **Rk,
 }
 
 
+
+
 /* randQB single vector algorithm with power method 
 inputs: matrix M, rank k [integer (>0)], power scheme parameter p [ integer (>=0) ]
 outputs: matrices Q and B s.t. M \approx Q*B 

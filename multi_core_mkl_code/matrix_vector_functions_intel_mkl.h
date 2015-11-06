@@ -265,6 +265,11 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out);
 
 
+void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k);
+
+
+void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k);
+
 //void fill_matrix_from_column_list(mat *M, vec *I, mat *M_k);
 
 

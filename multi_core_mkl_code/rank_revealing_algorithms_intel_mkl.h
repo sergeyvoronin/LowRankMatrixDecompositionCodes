@@ -39,6 +39,8 @@ void get_householder_matrix(vec *x, int ind1, int ind2, mat *H);
 /* partial pivoted qr via householder  - faster version, no P */
 void pivoted_QR_of_specified_rank(mat *M, int k, int *frank, mat **Qk, mat **Rk, vec **I);
 
+
+
 /* randQB algorithm one vector at a time */
 void randQB_p(mat *M, int k, int p, mat **Q, mat **B);
 

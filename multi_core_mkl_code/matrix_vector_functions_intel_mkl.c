@@ -938,6 +938,33 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
 }
 
 
+void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i;
+    vec *col_vec;
+    for(i=0; i<k; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,vector_get_element(I,i),col_vec);
+        matrix_set_col(M_k,i,col_vec);
+        vector_delete(col_vec);
+    }
+}
+
+
+void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i,ind;
+    vec *col_vec;
+    ind = 0;
+    for(i=k; i<M->ncols; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,vector_get_element(I,i),col_vec);
+        matrix_set_col(M_k,ind,col_vec);
+        vector_delete(col_vec);
+        ind++;
+    }
+}
+
+
+
 /* Mout = M((k+1):end,(k+1):end) in matlab notation */
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out){
     int i,j,i_out,j_out;
