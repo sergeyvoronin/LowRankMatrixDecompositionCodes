@@ -854,7 +854,6 @@ void randQB_p(mat *M, int k, int p, mat **Q, mat **B){
 
 
 /* randQB blocked algorithm with power method 
-randQB single vector algorithm with power method 
 inputs: matrix M, integer kstep (block size), integer nstep (number of blocks), power scheme parameter p [ integer (>=0) ]
 outputs: matrices Q and B s.t. M \approx Q*B 
 */
@@ -1050,22 +1049,26 @@ default: solve column by column with tridiagonal system
 }*/
 
 
-/* computes the approximate ID decomposition of a matrix of specified rank 
+/* computes the column ID decomposition of a matrix of specified rank 
 : [I,T] = id_decomp_fixed_rank(M,k) 
 where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
 void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T){
     int i,j,frankQR,ind,m,n;
-    mat *Qk, *Rk, *Rk1, *Rk2, *invRk1, *P;
+    mat *Qk, *Rk, *Rk1, *Rk2;
     m = M->nrows;
     n = M->ncols;
-    FILE *fp;
 
     /* 
         [Qk,Rk,P,I] = qr_with_column_pivoting_fixed_rank(A,k);
         Rk1 = Rk(:,1:k);
         Rk2 = Rk(:,(k+1):end);
     */
-    pivoted_QR_of_specified_rank(M, k, &frankQR, &Qk, &Rk, I);
+    if( k < min(m,n) ){
+        pivoted_QR_of_specified_rank(M, k, &frankQR, &Qk, &Rk, I);
+    }else{
+        frankQR = k;
+        pivotedQR_mkl(M, &Qk, &Rk, I);
+    }
 
     Rk1 = matrix_new(frankQR,frankQR);
     Rk2 = matrix_new(frankQR,n-frankQR);
@@ -1074,24 +1077,74 @@ void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T){
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
-    // NOTE: must enforce Rk1 to be symmetric before inverting..
+    // NOTE: must enforce Rk1 to be upper triangular before inverting..
     // %Rk1*T = Rk2
     matrix_keep_only_upper_triangular(Rk1);
     upper_triangular_system_solve(Rk1,Rk2,*T,1);
+
+    matrix_delete(Rk1);
+    matrix_delete(Rk2);
 }
 
 
-/* evaluate approximation to M using supplied ID of rank k */
-/*
-void use_id_decomp_for_approximation(mat *M, mat *T, mat *P, vec *I, int k){
-    mat *Tt, *Ik, *U1, *U, *MI, *MA;
+/* computes the two sided ID decomposition of a matrix of specified rank 
+: [Icol,Irow,T,S] = id_two_sided_decomp_fixed_rank(M,k) 
+where Icol is the column redindexing vector and Irow is the row 
+indexing vector and T,S the matrices corresponding to column and row IDs */
+void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat **T, mat **S){
+    int m,n;
+    mat *MI, *MIt;
+    m = M->nrows;
+    n = M->ncols;
+
+    // perform column ID
+    id_decomp_fixed_rank(M, k, Icol, T);
+
+    // form MI
+    MI = matrix_new(M->nrows,k);
+    MIt = matrix_new(k,M->nrows);
+    fill_matrix_from_first_columns_from_list(M, *Icol, k, MI);
+    matrix_build_transpose(MIt, MI);
+
+    // perform row ID 
+    id_decomp_fixed_rank(MIt, k, Irow, S);
+
+    matrix_delete(MI);
+    matrix_delete(MIt);
+}
+
+
+/* evaluate approximation to M using supplied low rank SVD of rank k */
+void use_low_rank_svd_for_approximation(mat *M, mat *U, mat *S, mat *V){
+    mat *P;
+    P = matrix_new(M->nrows, M->ncols);
+    form_svd_product_matrix(U, S, V, P);
+
+    printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
+    printf("norm(P,fro) = %f\n", get_matrix_frobenius_norm(P));
+    printf("percent error = %f\n", get_percent_error_between_two_mats(M,P));
+
+    matrix_delete(P);
+}
+
+
+/* evaluate approximation to M using supplied column ID of rank k */
+void use_id_decomp_for_approximation(mat *M, mat *T, vec *I, int k){
+    vec *Iinv;
+    mat *Tt, *Ik, *V1, *V, *MI, *MA;
     int m,n;
     
     m = M->nrows; n = M->ncols;
 
     printf("norm(T,fro) = %f\n", get_matrix_frobenius_norm(T));
     printf("norm(T,max) = %f\n", get_matrix_max_abs_element(T));
+
+    // build Iinv
+    printf("build Iinv\n");
+    Iinv = vector_new(I->nrows);
+    vector_build_rewrapped(Iinv,I);
     
+    printf("build Tt\n");
     Tt = matrix_new(T->ncols,T->nrows);
     matrix_build_transpose(Tt,T);
     //printf("norm(Tt,fro) = %f\n", get_matrix_frobenius_norm(Tt));
@@ -1100,22 +1153,111 @@ void use_id_decomp_for_approximation(mat *M, mat *T, mat *P, vec *I, int k){
     initialize_identity_matrix(Ik);
     //printf("norm(Ik,fro) = %f\n", get_matrix_frobenius_norm(Ik));
 
-    U1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
-    append_matrices_vertically(Ik,Tt,U1);
+    printf("build V1\n");
+    V1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,V1);
 
-    U = matrix_new(P->nrows,U1->ncols);
-    matrix_matrix_mult(P,U1,U);
+    // V = V1(Iinv,:);
+    printf("build V\n");
+    V = matrix_new(Iinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(V1, Iinv, Iinv->nrows, V);
 
     // MI = M(:,I(1:k)); 
+    printf("build MI\n");
     MI = matrix_new(M->nrows,k);
-    fill_matrix_from_column_list(M, I, MI);
+    fill_matrix_from_first_columns_from_list(M, I, k, MI);
 
+    printf("build MA\n");
     MA = matrix_new(m,n);
-    matrix_matrix_transpose_mult(MI,U,MA);
+    matrix_matrix_transpose_mult(MI,V,MA);
 
     printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
     printf("norm(MA,fro) = %f\n", get_matrix_frobenius_norm(MA));
     printf("percent error = %f\n", get_percent_error_between_two_mats(M,MA));
+
+    matrix_delete(Ik); matrix_delete(V1); matrix_delete(V);
+    matrix_delete(MI); matrix_delete(MA); matrix_delete(Tt);
+    vector_delete(Iinv);
 }
-*/
+
+
+/* evaluate approximation to M using supplied two sided ID of rank k */
+void use_id_two_sided_decomp_for_approximation(mat *M, mat *T, mat *S, vec *Icol, vec *Irow, int k){
+    vec *Icolinv, *Irowinv;
+    mat *Tt, *St, *Ik, *V1, *V, *U1, *U, *MI, *MIJ, *UMIJ, *MA;
+    int m,n;
+    
+    m = M->nrows; n = M->ncols;
+
+    printf("norm(T,fro) = %f\n", get_matrix_frobenius_norm(T));
+    printf("norm(T,max) = %f\n", get_matrix_max_abs_element(T));
+    printf("norm(S,fro) = %f\n", get_matrix_frobenius_norm(S));
+    printf("norm(S,max) = %f\n", get_matrix_max_abs_element(S));
+
+    // build kxk identity
+    Ik = matrix_new(k,k);
+    initialize_identity_matrix(Ik);
+
+    // build Icolinv
+    printf("build Icolinv\n");
+    Icolinv = vector_new(Icol->nrows);
+    vector_build_rewrapped(Icolinv,Icol);
+    
+    printf("build Tt\n");
+    Tt = matrix_new(T->ncols,T->nrows);
+    matrix_build_transpose(Tt,T);
+    //printf("norm(Tt,fro) = %f\n", get_matrix_frobenius_norm(Tt));
+
+    printf("build V1\n");
+    V1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,V1);
+
+    // V = V1(Icolinv,:);
+    printf("build V\n");
+    V = matrix_new(Icolinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(V1, Icolinv, Icolinv->nrows, V);
+
+    // build Irowinv
+    printf("build Irowinv\n");
+    Irowinv = vector_new(Irow->nrows);
+    vector_build_rewrapped(Irowinv,Irow);
+    
+    printf("build St\n");
+    St = matrix_new(S->ncols,S->nrows);
+    matrix_build_transpose(St,S);
+
+    printf("build U1\n");
+    U1 = matrix_new(Ik->nrows + St->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,St,U1);
+
+    // U = U1(Irowinv,:);
+    printf("build U\n");
+    U = matrix_new(Irowinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(U1, Irowinv, Irowinv->nrows, U);
+
+    // MI = M(:,Icol(1:k)); 
+    // MIJ = M(Irow(1:k),Icol(1:k)); 
+    printf("build MI\n");
+    MI = matrix_new(M->nrows,k);
+    fill_matrix_from_first_columns_from_list(M, Icol, k, MI);
+    MIJ = matrix_new(k,k);
+    fill_matrix_from_first_rows_from_list(MI, Irow, k, MIJ);
+
+    printf("build MA\n");
+    UMIJ = matrix_new(m,k);
+    MA = matrix_new(m,n);
+    matrix_matrix_mult(U,MIJ,UMIJ);
+    matrix_matrix_transpose_mult(UMIJ,V,MA);
+
+    printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
+    printf("norm(MA,fro) = %f\n", get_matrix_frobenius_norm(MA));
+    printf("percent error = %f\n", get_percent_error_between_two_mats(M,MA));
+
+    matrix_delete(Ik); matrix_delete(MI); matrix_delete(MIJ);
+    matrix_delete(UMIJ); matrix_delete(MA); matrix_delete(Tt);
+    matrix_delete(V1); matrix_delete(V); matrix_delete(U1);
+    matrix_delete(U); matrix_delete(St);
+    vector_delete(Icolinv);
+    vector_delete(Irowinv);
+}
 

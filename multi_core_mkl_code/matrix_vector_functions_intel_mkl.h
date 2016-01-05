@@ -265,8 +265,12 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out);
 
 
+/* M_k = M(:,I(1:k)) */
 void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k);
 
+/* M_k = M(I(1:k),:) */
+void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k);
+ 
 
 void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k);
 
@@ -280,6 +284,9 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C);
 
  
 void append_matrices_vertically(mat *A, mat *B, mat *C);
+
+/* Iinv(I)=[0:length(I)-1] */
+void vector_build_rewrapped(vec *Iinv, vec *I);
 
 
 /* calculate percent error between A and B: 100*norm(A - B)/norm(A) */

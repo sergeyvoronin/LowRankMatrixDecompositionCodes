@@ -1,6 +1,6 @@
 m = 5000;
 n = 7000;
-k = 3000;
+k = 1000;
 
 fprintf('making %d x %d matrix A..\n',m,n);
 p = min(m,n);

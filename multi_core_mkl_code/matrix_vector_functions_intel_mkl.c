@@ -937,7 +937,7 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
     }
 }
 
-
+/* M_k = M(:,I(1:k)) */
 void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
     int i;
     vec *col_vec;
@@ -948,6 +948,20 @@ void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
         vector_delete(col_vec);
     }
 }
+
+
+/* M_k = M(I(1:k),:) */
+void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i;
+    vec *row_vec;
+    for(i=0; i<k; i++){
+        row_vec = vector_new(M->nrows);
+        matrix_get_row(M,vector_get_element(I,i),row_vec);
+        matrix_set_row(M_k,i,row_vec);
+        vector_delete(row_vec);
+    }
+}
+
 
 
 void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k){
@@ -1033,8 +1047,14 @@ void append_matrices_vertically(mat *A, mat *B, mat *C){
 }
 
 
-
-
+/* builds Iinv(I) = [0:n-1] */
+void vector_build_rewrapped(vec *Iinv, vec *I){
+    int i,ind;
+    for(i=0; i<(I->nrows); i++){
+        ind = vector_get_element(I,i);
+        vector_set_element(Iinv,ind,i);
+    }
+}
 
 
 /* compute eigendecomposition of symmetric matrix M
@@ -1134,6 +1154,8 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 
     // form P = U*S*V^T
     matrix_matrix_mult(U,SVt,P);
+
+    matrix_delete(SVt);
 }
 
 

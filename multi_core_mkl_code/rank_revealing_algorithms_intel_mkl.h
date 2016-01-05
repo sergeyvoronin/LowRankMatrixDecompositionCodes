@@ -54,14 +54,24 @@ invert different ways
 3. Use SVD of A to compute inverse 
 default: solve column by column with tridiagonal system
 */
-void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+//void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
 
 
-/* computes the approximate ID decomposition of a matrix of specified rank 
+/* computes the column ID decomposition of a matrix of specified rank 
 : [I,T] = id_decomp_fixed_rank(M,k) 
 where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
 void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T);
- 
-/* evaluate approximation to M using supplied ID of rank k */
-//void use_id_decomp_for_approximation(mat *M, mat *T, mat *P, vec *I, int k);
 
+
+/* computes two sided ID decomposition of a matrix of specified rank */
+void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat **T, mat **S);
+
+/* evaluate approximation to M using supplied low rank SVD of rank k */
+void use_low_rank_svd_for_approximation(mat *M, mat *U, mat *S, mat *V);
+
+/* evaluate approximation to M using supplied column ID of rank k */
+void use_id_decomp_for_approximation(mat *M, mat *T, vec *I, int k);
+
+/* evaluate approximation to M using supplied two sided ID of rank k */
+void use_id_two_sided_decomp_for_approximation(mat *M, mat *T, mat *S, vec *Icol, vec *Irow, int k);
+ 
