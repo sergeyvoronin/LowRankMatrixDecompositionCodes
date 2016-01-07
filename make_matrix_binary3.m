@@ -1,10 +1,10 @@
 % make a matrix with rapdily decaying singular values and save to disk in binary format 
 more off;
 
-m = 1000;
-n = 2000;
-bin_file = 'data/A_mat_1kx2k.bin'
-mat_file = 'data/A_mat_1kx2k.mat'
+m = 5000;
+n = 5000;
+bin_file = 'data/A_mat_5kx5k.bin'
+mat_file = 'data/A_mat_5kx5k.mat'
  
 
 fprintf('making matrix..\n');
@@ -17,7 +17,7 @@ else
    [V, temp] = qr(randn(n,m),0);
 end
 if p>1
-    S = logspace(1,-3,p);
+    S = logspace(1,-4,p);
 else
     S = [1];
 end
@@ -42,6 +42,4 @@ fclose(fp);
 fprintf('writing to mat file too..\n');
 
 save(mat_file,'M');
-
-fprintf('norm(M,fro) = %f\n', norm(M,'fro'));
 

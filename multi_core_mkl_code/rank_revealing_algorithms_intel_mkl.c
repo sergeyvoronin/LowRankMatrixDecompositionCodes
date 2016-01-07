@@ -1067,6 +1067,7 @@ void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T){
         pivoted_QR_of_specified_rank(M, k, &frankQR, &Qk, &Rk, I);
     }else{
         frankQR = k;
+        //pivoted_QR_of_specified_rank(M, k, &frankQR, &Qk, &Rk, I);
         pivotedQR_mkl(M, &Qk, &Rk, I);
     }
 
@@ -1111,6 +1112,77 @@ void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat *
 
     matrix_delete(MI);
     matrix_delete(MIt);
+}
+
+
+/* computes a rank k cur decomposition of a matrix */
+void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R){
+    mat *Ik, *T, *S, *Tt, *V1, *V, *RV, *RRt, *Ut;
+    vec *Icol, *Irow, *Icolinv;
+    int i,minindex, maxindex;
+    double minval, maxval;
+    
+    // perform two sided ID
+    id_two_sided_decomp_fixed_rank(M, k, &Icol, &Irow, &T, &S);
+
+    Ik = matrix_new(k,k);
+    initialize_identity_matrix(Ik);
+
+    // build Icolinv
+    printf("build Icolinv\n");
+    Icolinv = vector_new(Icol->nrows);
+    vector_build_rewrapped(Icolinv,Icol);
+    
+    printf("build Tt\n");
+    Tt = matrix_new(T->ncols,T->nrows);
+    matrix_build_transpose(Tt,T);
+
+    printf("build V1\n");
+    V1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,V1);
+
+    // V = V1(Icolinv,:);
+    printf("build V\n");
+    V = matrix_new(Icolinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(V1, Icolinv, Icolinv->nrows, V);
+
+    //R = M(Irow(1:k),:)
+    printf("build R\n");
+    printf("norm(Icol) = %f\n", vector_get2norm(Icol));
+    printf("norm(Irow) = %f\n", vector_get2norm(Irow));
+    //vector_print(Irow);
+    vector_get_min_element(Irow, &minindex, &minval);
+    vector_get_max_element(Irow, &maxindex, &maxval);
+    printf("minval = %fat i=%d and maxval = %f at i=%d\n", minval, minindex, maxval, maxindex);
+
+    *R = matrix_new(k,M->ncols);
+    fill_matrix_from_first_rows_from_list(M, Irow, k, *R);
+    //printf("norm(R) = %f\n", get_matrix_frobenius_norm(*R));
+
+    //C = M(:,Icol(1:k));
+    printf("build C\n");
+    *C = matrix_new(M->nrows,k);
+    fill_matrix_from_first_columns_from_list(M, Icol, k, *C);
+    //printf("norm(C) = %f\n", get_matrix_frobenius_norm(*C));
+
+
+    //RRt*Ut = V
+    printf("build U\n");
+    RRt = matrix_new(k,k);
+    Ut = matrix_new(k,k);
+    *U = matrix_new(k,k);
+    RV = matrix_new(k,k);
+    matrix_matrix_transpose_mult(*R,*R,RRt);
+    matrix_matrix_mult(*R,V,RV);
+    printf("solve for Ut\n");
+    square_matrix_system_solve(RRt,Ut,RV);
+    printf("transpose to get U\n");
+    matrix_build_transpose(*U,Ut);
+
+    matrix_delete(Ut); matrix_delete(RV); matrix_delete(RRt);
+    matrix_delete(V1); matrix_delete(V); matrix_delete(T);
+    matrix_delete(Tt); matrix_delete(S);
+    vector_delete(Irow); vector_delete(Icol); vector_delete(Icolinv);
 }
 
 
@@ -1259,5 +1331,19 @@ void use_id_two_sided_decomp_for_approximation(mat *M, mat *T, mat *S, vec *Icol
     matrix_delete(U); matrix_delete(St);
     vector_delete(Icolinv);
     vector_delete(Irowinv);
+}
+
+
+/* evaluate approximation to M using supplied CUR decomposition of rank k */
+void use_cur_decomp_for_approximation(mat *M, mat *C, mat *U, mat *R){
+    mat *P;
+    P = matrix_new(M->nrows, M->ncols);
+    form_cur_product_matrix(C, U, R, P);
+
+    printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
+    printf("norm(P,fro) = %f\n", get_matrix_frobenius_norm(P));
+    printf("percent error = %f\n", get_percent_error_between_two_mats(M,P));
+
+    matrix_delete(P);
 }
 

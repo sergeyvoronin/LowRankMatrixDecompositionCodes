@@ -62,9 +62,12 @@ default: solve column by column with tridiagonal system
 where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
 void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T);
 
-
 /* computes two sided ID decomposition of a matrix of specified rank */
 void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat **T, mat **S);
+
+/* computes a rank k cur decomposition of a matrix */
+void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R);
+
 
 /* evaluate approximation to M using supplied low rank SVD of rank k */
 void use_low_rank_svd_for_approximation(mat *M, mat *U, mat *S, mat *V);
@@ -75,3 +78,6 @@ void use_id_decomp_for_approximation(mat *M, mat *T, vec *I, int k);
 /* evaluate approximation to M using supplied two sided ID of rank k */
 void use_id_two_sided_decomp_for_approximation(mat *M, mat *T, mat *S, vec *Icol, vec *Irow, int k);
  
+/* evaluate approximation to M using supplied CUR decomposition of rank k */
+void use_cur_decomp_for_approximation(mat *M, mat *C, mat *U, mat *R);
+

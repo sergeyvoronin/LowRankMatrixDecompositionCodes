@@ -1,17 +1,24 @@
-RSVDPACK: Implementations of fast randomized algorithms for computing low rank SVD decompositions of a matrix and new rank revealing decompositions 
-using randomized sampling. Given, a real mxn matrix A and a rank parameter 
+RSVDPACK: Implementations of fast algorithms for computing the low rank SVD, 
+interpolative and CUR decompositions, using randomized sampling. 
+Given, a real mxn matrix A and a rank parameter 
 k<< min(m,n) (or optionally, a tolerance parameter instead of rank) the 
 rsvd routines compute  
 U_k, Sigma_k, and V_k
 where U_k is mxk, Sigma_k is kxk, and V_k is nxk, such that:
 A \approx U_k Sigma_k V^T_k
 
-The rank revealing routines (work in progress) can compute 
+The rank revealing routines can compute 
 decompositions of the form 
 A \approx Q_k B_k from which other decompositions may be efficiently computed.
 
+The interpolative decomposition routines return a single or double sided ID of a matrix, 
+while the CUR decomposition can decompose a matrix into the form A \approx C U R 
+where C and R contain a selection of the columns and rows, respectively of the 
+original A.
+
 For more detailed information on the implemented algorithms see:
 http://arxiv.org/abs/1502.05366
+http://arxiv.org/abs/1412.8447
 http://arxiv.org/abs/1503.07157
 
 There are three codes: for single processor (with GNU GSL), multiprocessor 
@@ -23,12 +30,14 @@ the multi-core Intel MKL version and with the CUDA/CULA version.
 In addition, experimental Matlab mex-file support for the multi-core and 
 GPU C codes is available.
 
-Written by Sergey Voronin, 2014-2015 as part of a collaborative project with Per-Gunnar Martinsson.
-Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18
+Written by Sergey Voronin, 2014-2016 as part of a collaborative project with Per-Gunnar Martinsson.
+Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18. Should also work 
+with more recent version of the software. 
 
 Algorithms used based on those originally described in the article: 
 "Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions," N. Halko, P.G. Martinsson, J. Tropp, SIAM Review, 53(2), 2011
-with some modifications. See the arxiv articles for more details.
+and in the other mentioned articles, with some modifications. 
+See the arxiv articles for more details.
 
 ============ summary of installation and usage ==============
 

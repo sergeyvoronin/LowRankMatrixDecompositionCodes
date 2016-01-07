@@ -79,7 +79,7 @@ mat * matrix_load_from_binary_file(char *fname){
     size_t one = 1;
     FILE *fp;
     mat *M;
-    
+
     fp = fopen(fname,"r");
     fread(&num_rows,sizeof(int),one,fp); //read m
     fread(&num_columns,sizeof(int),one,fp); //read n
@@ -98,6 +98,7 @@ mat * matrix_load_from_binary_file(char *fname){
 
     return M;
 }
+  
 
 
 /* write matrix to binary file 
@@ -308,6 +309,35 @@ double vector_get2norm(vec *v){
     }
     return sqrt(normval);
 }
+
+
+void vector_get_min_element(vec *v, int *minindex, double *minval){
+    int i, val;
+    *minindex = 0;
+    *minval = v->d[0];
+    for(i=0; i<(v->nrows); i++){
+        val = v->d[i];
+        if(val < *minval){
+            *minval = val;
+            *minindex = i;
+        }
+    }
+}
+
+
+void vector_get_max_element(vec *v, int *maxindex, double *maxval){
+    int i, val;
+    *maxindex = 0;
+    *maxval = v->d[0];
+    for(i=0; i<(v->nrows); i++){
+        val = v->d[i];
+        if(val > *maxval){
+            *maxval = val;
+            *maxindex = i;
+        }
+    }
+}
+
 
 
 /* returns the dot product of two vectors */
@@ -955,8 +985,8 @@ void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k){
     int i;
     vec *row_vec;
     for(i=0; i<k; i++){
-        row_vec = vector_new(M->nrows);
-        matrix_get_row(M,vector_get_element(I,i),row_vec);
+        row_vec = vector_new(M->ncols);
+        matrix_get_row(M,(int)vector_get_element(I,i),row_vec);
         matrix_set_row(M_k,i,row_vec);
         vector_delete(row_vec);
     }
@@ -1142,8 +1172,6 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
     int k,m,n;
-    double alpha, beta;
-    alpha = 1.0; beta = 0.0;
     m = P->nrows;
     n = P->ncols;
     k = S->nrows;
@@ -1156,6 +1184,24 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
     matrix_matrix_mult(U,SVt,P);
 
     matrix_delete(SVt);
+}
+
+
+/* P = C * U * R */
+void form_cur_product_matrix(mat *C, mat *U, mat *R, mat *P){
+    int k,m,n;
+    m = P->nrows;
+    n = P->ncols;
+    k = U->nrows;
+    mat * CU = matrix_new(m,k);
+
+    // form CU = C*U
+    matrix_matrix_mult(C,U,CU);
+
+    // form P = CU*R
+    matrix_matrix_mult(CU,R,P);
+
+    matrix_delete(CU);
 }
 
 
@@ -1342,6 +1388,15 @@ void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type){
         }
         vector_delete(col_vec);
     }
+}
+
+
+void square_matrix_system_solve(mat *A, mat *X, mat *B){
+    //LAPACKE_dtrtri( LAPACK_COL_MAJOR, 'U', 'N', Minv->nrows, Minv->d, Minv->nrows);
+    int * ipiv = (int*)malloc((A->nrows)*sizeof(int)); 
+    LAPACKE_dgesv(LAPACK_COL_MAJOR , A->nrows , B->ncols , A->d , A->ncols , ipiv , B->d , B->ncols );
+    matrix_copy(X,B);
+    free(ipiv);
 }
 
 

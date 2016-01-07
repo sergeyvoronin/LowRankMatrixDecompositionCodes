@@ -82,6 +82,11 @@ void matrix_scale(mat *M, double scalar);
 /* compute euclidean norm of vector */
 double vector_get2norm(vec *v);
 
+/* min value and index of vector */
+void vector_get_min_element(vec *v, int *minindex, double *minval);
+
+/* max value and index of vector */
+void vector_get_max_element(vec *v, int *maxindex, double *maxval);
 
 /* copy contents of vec s to d  */
 void vector_copy(vec *d, vec *s);
@@ -327,8 +332,14 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
 
+/* P = C * U * R */
+void form_cur_product_matrix(mat *C, mat *U, mat *R, mat *P);
+
 /* solve A X = B with A upper triangular */
 void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+
+/* solve A X = B with A square matrix */
+void square_matrix_system_solve(mat *A, mat *X, mat *B);
 
 /* get seconds for recording runtime */
 double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval);
