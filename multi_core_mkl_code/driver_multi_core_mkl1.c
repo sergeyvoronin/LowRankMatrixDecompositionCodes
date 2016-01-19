@@ -12,7 +12,7 @@ int main()
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
     //char *M_file = "../data/A_mat_6kx12k.bin";
-    char *M_file = "../data/A_mat_2kx4k.bin";
+    char *M_file = "../data/A_mat_1kx2k.bin";
 
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
@@ -21,7 +21,7 @@ int main()
     printf("sizes of M are %d by %d\n", m, n);
 
     // now test low rank SVD of M..
-    k = 1000;
+    k = 200;
     
     printf("calling random SVD..\n");
     time(&start_time);

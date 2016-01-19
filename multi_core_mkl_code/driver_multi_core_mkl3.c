@@ -7,7 +7,7 @@
 
 int main()
 {
-    int i, j, m, n, k;
+    int i, j, m, n, k, l, p, s;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *T, *S, *C, *U, *R;
     vec *Icol, *Irow;
@@ -25,9 +25,12 @@ int main()
     printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
 
     // now test rank k ID of M..
-    k = 400;
+    k = 400; // rank
+    l = 20; // oversampling 
+    p = 5; // power scheme power
+    s = 1; // power scheme orthogonalization amount
     
-    printf("calling rank %d column ID routine..\n", k);
+    printf("\ncalling rank %d column ID routine..\n", k);
     time(&start_time);
     id_decomp_fixed_rank(M, k, &Icol, &T);
     time(&end_time);
@@ -35,7 +38,17 @@ int main()
     printf("check error\n");
     use_id_decomp_for_approximation(M, T, Icol, k);
 
-    printf("calling rank %d two sided ID routine..\n", k);
+
+    printf("\ncalling rank %d randomized column ID routine..\n", k);
+    time(&start_time);
+    id_rand_decomp_fixed_rank(M, k, l, p, s, &Icol, &T);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_id_decomp_for_approximation(M, T, Icol, k);
+
+
+    printf("\ncalling rank %d two sided ID routine..\n", k);
     time(&start_time);
     id_two_sided_decomp_fixed_rank(M, k, &Icol, &Irow, &T, &S);
     time(&end_time);
@@ -43,13 +56,33 @@ int main()
     printf("check error\n");
     use_id_two_sided_decomp_for_approximation(M, T, S, Icol, Irow, k);
 
-    printf("calling rank %d CUR routine\n", k);
+
+    printf("\ncalling rank %d randomized two sided ID routine..\n", k);
+    time(&start_time);
+    id_two_sided_rand_decomp_fixed_rank(M, k, l, p, s, &Icol, &Irow, &T, &S);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_id_two_sided_decomp_for_approximation(M, T, S, Icol, Irow, k);
+
+
+    printf("\ncalling rank %d CUR routine\n", k);
     time(&start_time);
     cur_decomp_fixed_rank(M, k, &C, &U, &R);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
     printf("check error\n");
     use_cur_decomp_for_approximation(M, C, U, R);
+
+
+    printf("calling rank %d randomized CUR routine\n", k);
+    time(&start_time);
+    cur_rand_decomp_fixed_rank(M, k, l, p, s, &C, &U, &R);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_cur_decomp_for_approximation(M, C, U, R);
+ 
     
     // delete and exit
     printf("delete and exit..\n");

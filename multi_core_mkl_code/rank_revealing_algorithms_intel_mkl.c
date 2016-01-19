@@ -686,6 +686,7 @@ void pivoted_QR_of_specified_rank(mat *M, int k, int *frank, mat **Qk, mat **Rk,
 
 
         /* break; Qk and Rk already set for i>0 */
+        /* replace this with tolerance or take out */
         if(vector_get_element(column_norms1,max_colnorm_index) == 0 && i>0){
             column_norm_zero = 1;
             printf("column norm zero detected and will break!\n");
@@ -1088,6 +1089,119 @@ void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T){
 }
 
 
+
+/* computes the approximate column ID decomposition of a matrix of specified rank 
+: [I,T] = id_rand_decomp_fixed_rank(M,k,l,p,s) 
+where I is the vector from the permutation and T = inv(Rk1)*Rk2 
+l is oversampling parameter (e.g. l = 20), p is power sampling parameter (e.g. p = 5) 
+and s controls how many orthogonalizations are done in between mults in power 
+sampling scheme (e.g. p = 1) */
+void id_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **I, mat **T){
+    int i,j,frankQR,ind,m,n;
+    mat *RN, *Y, *Yt, *Yt_orth, *Z, *Qk, *Rk, *Qd, *Rd, *Rk1, *Rk2;
+    m = M->nrows;
+    n = M->ncols;
+
+    // build random matrix
+    // RN = randn(k+l,m)
+    RN = matrix_new(k+l, m);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    //printf("form Y..\n");
+    Y = matrix_new(k+l,n);
+    matrix_matrix_mult(RN, M, Y);
+
+    // now build up R (M M^T)^p with orthogonalizations in between mults 
+    // notice that Yt is a tall matrix
+
+    for(j=1; j<=p; j++){
+        //printf("in loop for j=%d of %d\n", j, p);
+
+        Yt = matrix_new(n,k+l);
+        Yt_orth = matrix_new(n,k+l);
+        Z = matrix_new(k+l,n);
+
+        if((2*j-2) % s == 0){
+            // Z = qr(Y',0)'; 
+            //printf("j = %d, doing first orthogonalization\n", j);
+            matrix_build_transpose(Yt,Y);
+            QR_factorization_getQ(Yt, Yt_orth);
+            matrix_build_transpose(Z,Yt_orth);
+        }
+        else{
+            matrix_copy(Z,Y);
+        }
+
+        // Y = Z*M';  
+        //printf("doing Y = Z*M^t\n");
+        matrix_delete(Y);
+        matrix_delete(Yt);
+        matrix_delete(Yt_orth);
+        Y = matrix_new(k+l,m);
+        Yt = matrix_new(m,k+l);
+        Yt_orth = matrix_new(m,k+l);
+        matrix_matrix_transpose_mult(Z,M,Y);
+        matrix_delete(Z);
+        Z = matrix_new(k+l,m);
+        
+        if((2*j-1) % s == 0){
+            // Z = qr(Y',0)'; 
+            //printf("j = %d, doing second orthogonalization\n", j);
+            matrix_build_transpose(Yt,Y);
+            QR_factorization_getQ(Yt, Yt_orth);
+            matrix_build_transpose(Z,Yt_orth);
+        }
+        else{
+            matrix_copy(Z,Y);
+        }
+
+        // Y = Z*M;
+        matrix_delete(Y);
+        matrix_delete(Yt);
+        Y = matrix_new(k+l,n);
+        matrix_matrix_mult(Z,M,Y);
+    }
+
+
+    /* 
+        % do full pivoted QR call on Y instead of M 
+        [Qk,Rk,I] = qr(Y,0); % full QR
+        Rk1 = Rk(:,1:k);
+        Rk2 = Rk(:,(k+1):end);
+    */
+    pivotedQR_mkl(Y, &Qd, &Rd, I);
+    
+    Qk = matrix_new(Qd->nrows,k);   
+    Rk = matrix_new(k,Rd->ncols);   
+    fill_matrix_from_first_columns(Qd, k, Qk);
+    fill_matrix_from_first_rows(Rd, k, Rk);
+    
+    frankQR = k;
+    Rk1 = matrix_new(frankQR,frankQR);
+    Rk2 = matrix_new(frankQR,n-frankQR);
+    fill_matrix_from_first_columns(Rk, frankQR, Rk1);
+    fill_matrix_from_last_columns(Rk, frankQR, Rk2);
+
+    *T = matrix_new(Rk2->nrows,Rk2->ncols);
+
+    // NOTE: must enforce Rk1 to be upper triangular before inverting..
+    // %Rk1*T = Rk2
+    matrix_keep_only_upper_triangular(Rk1);
+    upper_triangular_system_solve(Rk1,Rk2,*T,1);
+
+    matrix_delete(Y);
+    matrix_delete(Z);
+    matrix_delete(Qd);
+    matrix_delete(Rd);
+    matrix_delete(Qk);
+    matrix_delete(Rk);
+    matrix_delete(Rk1);
+    matrix_delete(Rk2);
+}
+
+
+
 /* computes the two sided ID decomposition of a matrix of specified rank 
 : [Icol,Irow,T,S] = id_two_sided_decomp_fixed_rank(M,k) 
 where Icol is the column redindexing vector and Irow is the row 
@@ -1113,6 +1227,32 @@ void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat *
     matrix_delete(MI);
     matrix_delete(MIt);
 }
+
+
+/* randomized two sided ID of rank k */
+void id_two_sided_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S){
+    int m,n;
+    mat *MI, *MIt;
+    m = M->nrows;
+    n = M->ncols;
+
+    // perform randomized column ID
+    // id_decomp_fixed_rank(M, k, Icol, T);
+    id_rand_decomp_fixed_rank(M, k, l, p, s, Icol, T);
+
+    // form MI
+    MI = matrix_new(M->nrows,k);
+    MIt = matrix_new(k,M->nrows);
+    fill_matrix_from_first_columns_from_list(M, *Icol, k, MI);
+    matrix_build_transpose(MIt, MI);
+
+    // perform row ID - this is a full ID since MIt has rank k 
+    id_decomp_fixed_rank(MIt, k, Irow, S);
+
+    matrix_delete(MI);
+    matrix_delete(MIt);
+}
+
 
 
 /* computes a rank k cur decomposition of a matrix */
@@ -1153,7 +1293,7 @@ void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R){
     //vector_print(Irow);
     vector_get_min_element(Irow, &minindex, &minval);
     vector_get_max_element(Irow, &maxindex, &maxval);
-    printf("minval = %fat i=%d and maxval = %f at i=%d\n", minval, minindex, maxval, maxindex);
+    printf("minval = %f at i=%d and maxval = %f at i=%d\n", minval, minindex, maxval, maxindex);
 
     *R = matrix_new(k,M->ncols);
     fill_matrix_from_first_rows_from_list(M, Irow, k, *R);
@@ -1184,6 +1324,79 @@ void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R){
     matrix_delete(Tt); matrix_delete(S);
     vector_delete(Irow); vector_delete(Icol); vector_delete(Icolinv);
 }
+
+
+
+/* computes a randomized rank k cur decomposition of a matrix */
+void cur_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, mat **C, mat **U, mat **R){
+    mat *Ik, *T, *S, *Tt, *V1, *V, *RV, *RRt, *Ut;
+    vec *Icol, *Irow, *Icolinv;
+    int i,minindex, maxindex;
+    double minval, maxval;
+    
+    // perform two sided ID
+    id_two_sided_rand_decomp_fixed_rank(M, k, l, p, s, &Icol, &Irow, &T, &S);
+
+    Ik = matrix_new(k,k);
+    initialize_identity_matrix(Ik);
+
+    // build Icolinv
+    printf("build Icolinv\n");
+    Icolinv = vector_new(Icol->nrows);
+    vector_build_rewrapped(Icolinv,Icol);
+    
+    printf("build Tt\n");
+    Tt = matrix_new(T->ncols,T->nrows);
+    matrix_build_transpose(Tt,T);
+
+    printf("build V1\n");
+    V1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,V1);
+
+    // V = V1(Icolinv,:);
+    printf("build V\n");
+    V = matrix_new(Icolinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(V1, Icolinv, Icolinv->nrows, V);
+
+    //R = M(Irow(1:k),:)
+    printf("build R\n");
+    printf("norm(Icol) = %f\n", vector_get2norm(Icol));
+    printf("norm(Irow) = %f\n", vector_get2norm(Irow));
+    //vector_print(Irow);
+    vector_get_min_element(Irow, &minindex, &minval);
+    vector_get_max_element(Irow, &maxindex, &maxval);
+    printf("minval = %f at i=%d and maxval = %f at i=%d\n", minval, minindex, maxval, maxindex);
+
+    *R = matrix_new(k,M->ncols);
+    fill_matrix_from_first_rows_from_list(M, Irow, k, *R);
+    //printf("norm(R) = %f\n", get_matrix_frobenius_norm(*R));
+
+    //C = M(:,Icol(1:k));
+    printf("build C\n");
+    *C = matrix_new(M->nrows,k);
+    fill_matrix_from_first_columns_from_list(M, Icol, k, *C);
+    //printf("norm(C) = %f\n", get_matrix_frobenius_norm(*C));
+
+
+    //RRt*Ut = V
+    printf("build U\n");
+    RRt = matrix_new(k,k);
+    Ut = matrix_new(k,k);
+    *U = matrix_new(k,k);
+    RV = matrix_new(k,k);
+    matrix_matrix_transpose_mult(*R,*R,RRt);
+    matrix_matrix_mult(*R,V,RV);
+    printf("solve for Ut\n");
+    square_matrix_system_solve(RRt,Ut,RV);
+    printf("transpose to get U\n");
+    matrix_build_transpose(*U,Ut);
+
+    matrix_delete(Ut); matrix_delete(RV); matrix_delete(RRt);
+    matrix_delete(V1); matrix_delete(V); matrix_delete(T);
+    matrix_delete(Tt); matrix_delete(S);
+    vector_delete(Irow); vector_delete(Icol); vector_delete(Icolinv);
+}
+
 
 
 /* evaluate approximation to M using supplied low rank SVD of rank k */
