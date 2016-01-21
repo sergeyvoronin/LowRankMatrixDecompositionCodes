@@ -7,7 +7,7 @@
 
 int main()
 {
-    int i, j, m, n, k, l, p, s;
+    int i, j, m, n, k, l, p, s, kstep, estep;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *T, *S, *C, *U, *R;
     vec *Icol, *Irow;
@@ -29,6 +29,8 @@ int main()
     l = 20; // oversampling 
     p = 5; // power scheme power
     s = 1; // power scheme orthogonalization amount
+    kstep = 100; //block step size
+    estep = 1; // block oversampling
     
     printf("\ncalling rank %d column ID routine..\n", k);
     time(&start_time);
@@ -42,6 +44,15 @@ int main()
     printf("\ncalling rank %d randomized column ID routine..\n", k);
     time(&start_time);
     id_rand_decomp_fixed_rank(M, k, l, p, s, &Icol, &T);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_id_decomp_for_approximation(M, T, Icol, k);
+
+
+    printf("\ncalling rank %d block randomized column ID routine..\n", k);
+    time(&start_time);
+    id_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &T);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
     printf("check error\n");
@@ -65,6 +76,14 @@ int main()
     printf("check error\n");
     use_id_two_sided_decomp_for_approximation(M, T, S, Icol, Irow, k);
 
+    printf("\ncalling rank %d block randomized two sided ID routine..\n", k);
+    time(&start_time);
+    id_two_sided_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &Irow, &T, &S);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_id_two_sided_decomp_for_approximation(M, T, S, Icol, Irow, k);
+
 
     printf("\ncalling rank %d CUR routine\n", k);
     time(&start_time);
@@ -74,8 +93,7 @@ int main()
     printf("check error\n");
     use_cur_decomp_for_approximation(M, C, U, R);
 
-
-    printf("calling rank %d randomized CUR routine\n", k);
+    printf("\ncalling rank %d randomized CUR routine\n", k);
     time(&start_time);
     cur_rand_decomp_fixed_rank(M, k, l, p, s, &C, &U, &R);
     time(&end_time);
@@ -83,7 +101,15 @@ int main()
     printf("check error\n");
     use_cur_decomp_for_approximation(M, C, U, R);
  
+    printf("\ncalling rank %d block randomized CUR routine\n", k);
+    time(&start_time);
+    cur_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &C, &U, &R);
+    time(&end_time);
+    printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
+    printf("check error\n");
+    use_cur_decomp_for_approximation(M, C, U, R);
     
+
     // delete and exit
     printf("delete and exit..\n");
     matrix_delete(M); matrix_delete(T); matrix_delete(S);

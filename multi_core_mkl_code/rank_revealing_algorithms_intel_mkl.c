@@ -255,13 +255,13 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
 
 /* computes the approximate low rank SVD of rank k of matrix M using the 
 QB blocked algorithm for Q and BBt method */
-void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V){
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int p, mat **U, mat **S, mat **V){
     int i,j,m,n,knew;
     double val;
     m = M->nrows; n = M->ncols;
     mat *Q, *B, *BBt;
 
-    printf("running randomized_low_rank_svd4 with kstep = %d, nstep = %d, q = %d\n", kstep, nstep, q);
+    printf("running randomized_low_rank_svd4 with kstep = %d, nstep = %d, p = %d\n", kstep, nstep, p);
     
     // setup mats
     knew = kstep*nstep;
@@ -269,8 +269,8 @@ void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat 
     *S = matrix_new(knew,knew);
     *V = matrix_new(n,knew);
 
-    printf("calling randQB with kstep = %d and nstep = %d and q = %d\n", kstep, nstep, q);
-    randQB_pb(M, kstep, nstep, q, &Q, &B);
+    printf("calling randQB with kstep = %d and nstep = %d and p = %d\n", kstep, nstep, p);
+    randQB_pb(M, kstep, nstep, p, 1, &Q, &B);
 
     BBt = matrix_new(knew,knew);
     matrix_matrix_transpose_mult(B,B,BBt); 
@@ -855,11 +855,11 @@ void randQB_p(mat *M, int k, int p, mat **Q, mat **B){
 
 
 /* randQB blocked algorithm with power method 
-inputs: matrix M, integer kstep (block size), integer nstep (number of blocks), power scheme parameter p [ integer (>=0) ]
+inputs: matrix M, integer kstep (block size), integer nstep (number of blocks), power scheme parameter p [ integer (>=0) ], orthogonalization amount in power scheme parameter s
 outputs: matrices Q and B s.t. M \approx Q*B 
 */
-void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
-    int i,j,m,n,l,s;
+void randQB_pb(mat *M, int kstep, int nstep, int p, int s, mat **Q, mat **B){
+    int i,j,m,n,l,step;
     double dotp,elapsed_time;
     int *inds_local, *inds_global;
     mat *A, *RN, *RNp, *Yp, *Qp, *Bp, *AtQp, *AtQp2, *QpBp, *Qj, *QjtQp, *QjQjtQp;
@@ -890,14 +890,14 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
     // copy M to A
     matrix_copy(A,M);
 
-    for(s=0; s<nstep; s++){
+    for(step=0; step<nstep; step++){
         printf("in step %d\n", s);
 
         
         gettimeofday(&start_timeval, NULL);
         inds_local = (int*)malloc(kstep*sizeof(int));
         for(i=0; i<kstep; i++){
-            inds_local[i] = kstep*s + i;
+            inds_local[i] = kstep*step + i;
         } 
         matrix_get_selected_columns(RN, inds_local, RNp);
         matrix_matrix_mult(A,RNp,Yp);
@@ -908,11 +908,22 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
 
         // power method
         gettimeofday(&start_timeval, NULL);
-        for(i=0; i<p; i++){
-            QR_factorization_getQ(Yp, Qp);
-            matrix_transpose_matrix_mult(A,Qp,AtQp);
-            QR_factorization_getQ(AtQp, AtQp2);
-            matrix_matrix_mult(A,AtQp2,Yp);
+        for(j=1; j<=p; j++){
+            if((2*j-2) % s == 0){
+                QR_factorization_getQ(Yp, Qp);
+                matrix_transpose_matrix_mult(A,Qp,AtQp);
+            }
+            else{
+                matrix_transpose_matrix_mult(A,Yp,AtQp);
+            }
+
+            if((2*j-1) % s == 0){
+                QR_factorization_getQ(AtQp, AtQp2);
+                matrix_matrix_mult(A,AtQp2,Yp);
+            }
+            else{
+                matrix_matrix_mult(A,AtQp,Yp);
+            }
         }
 
         // Qp = qr(Yp,0) 
@@ -923,14 +934,14 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
 
 
         // project Qp away from previous Q stuff
-        if(s>0){
+        if(step>0){
             gettimeofday(&start_timeval, NULL);
-            inds_global = (int*)malloc(s*kstep*sizeof(int));
-            Qj = matrix_new(m,s*kstep);
-            QjtQp = matrix_new(s*kstep,kstep);
+            inds_global = (int*)malloc(step*kstep*sizeof(int));
+            Qj = matrix_new(m,step*kstep);
+            QjtQp = matrix_new(step*kstep,kstep);
             QjQjtQp = matrix_new(m,kstep);
 
-            for(i=0; i<(s*kstep); i++){
+            for(i=0; i<(step*kstep); i++){
                 inds_global[i] = i;
             }
             matrix_get_selected_columns(*Q, inds_global, Qj);
@@ -953,7 +964,6 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B){
             free(Qj);
             free(inds_global);
         }
-
 
         // Bp = Qp'*A
         gettimeofday(&start_timeval, NULL);
@@ -1201,6 +1211,15 @@ void id_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **I, mat 
 }
 
 
+/* blocked randomized column ID */
+void id_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **I, mat **T){
+    mat *Q, *B;
+    int nstep = ceil(k/kstep);
+    nstep = nstep + estep;
+    randQB_pb(M, kstep, nstep, p, s, &Q, &B);
+    id_decomp_fixed_rank(B, k, I, T);
+}
+
 
 /* computes the two sided ID decomposition of a matrix of specified rank 
 : [Icol,Irow,T,S] = id_two_sided_decomp_fixed_rank(M,k) 
@@ -1253,6 +1272,33 @@ void id_two_sided_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec
     matrix_delete(MIt);
 }
 
+
+/* block randomized two sided ID of rank k */
+void id_two_sided_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S){
+    int m,n,nstep = ceil(k/kstep);
+    mat *Q, *B;
+    mat *MI, *MIt;
+    nstep = nstep + estep;
+    randQB_pb(M, kstep, nstep, p, s, &Q, &B);
+
+    m = M->nrows;
+    n = M->ncols;
+
+    // perform column ID on B
+    id_decomp_fixed_rank(B, k, Icol, T);
+
+    // form MI
+    MI = matrix_new(M->nrows,k);
+    MIt = matrix_new(k,M->nrows);
+    fill_matrix_from_first_columns_from_list(M, *Icol, k, MI);
+    matrix_build_transpose(MIt, MI);
+
+    // perform row ID - this is a full ID since MIt has rank k 
+    id_decomp_fixed_rank(MIt, k, Irow, S);
+
+    matrix_delete(MI);
+    matrix_delete(MIt);
+}
 
 
 /* computes a rank k cur decomposition of a matrix */
@@ -1396,6 +1442,80 @@ void cur_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, mat **C, mat
     matrix_delete(Tt); matrix_delete(S);
     vector_delete(Irow); vector_delete(Icol); vector_delete(Icolinv);
 }
+
+
+
+/* computes a block randomized rank k cur decomposition of a matrix */
+void cur_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, mat **C, mat **U, mat **R){
+    mat *Ik, *T, *S, *Tt, *V1, *V, *RV, *RRt, *Ut;
+    vec *Icol, *Irow, *Icolinv;
+    int i,minindex, maxindex;
+    double minval, maxval;
+    
+    // perform two sided ID
+    id_two_sided_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &Irow, &T, &S);
+
+    Ik = matrix_new(k,k);
+    initialize_identity_matrix(Ik);
+
+    // build Icolinv
+    printf("build Icolinv\n");
+    Icolinv = vector_new(Icol->nrows);
+    vector_build_rewrapped(Icolinv,Icol);
+    
+    printf("build Tt\n");
+    Tt = matrix_new(T->ncols,T->nrows);
+    matrix_build_transpose(Tt,T);
+
+    printf("build V1\n");
+    V1 = matrix_new(Ik->nrows + Tt->nrows,Ik->ncols);
+    append_matrices_vertically(Ik,Tt,V1);
+
+    // V = V1(Icolinv,:);
+    printf("build V\n");
+    V = matrix_new(Icolinv->nrows,V1->ncols);
+    fill_matrix_from_first_rows_from_list(V1, Icolinv, Icolinv->nrows, V);
+
+    //R = M(Irow(1:k),:)
+    printf("build R\n");
+    printf("norm(Icol) = %f\n", vector_get2norm(Icol));
+    printf("norm(Irow) = %f\n", vector_get2norm(Irow));
+    //vector_print(Irow);
+    vector_get_min_element(Irow, &minindex, &minval);
+    vector_get_max_element(Irow, &maxindex, &maxval);
+    printf("minval = %f at i=%d and maxval = %f at i=%d\n", minval, minindex, maxval, maxindex);
+
+    *R = matrix_new(k,M->ncols);
+    fill_matrix_from_first_rows_from_list(M, Irow, k, *R);
+    //printf("norm(R) = %f\n", get_matrix_frobenius_norm(*R));
+
+    //C = M(:,Icol(1:k));
+    printf("build C\n");
+    *C = matrix_new(M->nrows,k);
+    fill_matrix_from_first_columns_from_list(M, Icol, k, *C);
+    //printf("norm(C) = %f\n", get_matrix_frobenius_norm(*C));
+
+
+    //RRt*Ut = V
+    printf("build U\n");
+    RRt = matrix_new(k,k);
+    Ut = matrix_new(k,k);
+    *U = matrix_new(k,k);
+    RV = matrix_new(k,k);
+    matrix_matrix_transpose_mult(*R,*R,RRt);
+    matrix_matrix_mult(*R,V,RV);
+    printf("solve for Ut\n");
+    square_matrix_system_solve(RRt,Ut,RV);
+    printf("transpose to get U\n");
+    matrix_build_transpose(*U,Ut);
+
+    matrix_delete(Ut); matrix_delete(RV); matrix_delete(RRt);
+    matrix_delete(V1); matrix_delete(V); matrix_delete(T);
+    matrix_delete(Tt); matrix_delete(S);
+    vector_delete(Irow); vector_delete(Icol); vector_delete(Icolinv);
+}
+
+
 
 
 

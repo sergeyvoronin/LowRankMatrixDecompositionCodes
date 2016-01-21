@@ -15,7 +15,7 @@ void randomized_low_rank_svd3(mat *M, int k, int q, int s, mat **U, mat **S, mat
 
 /* computes the approximate low rank SVD of rank k of matrix M using the 
 QB blocked algorithm for Q and BBt method */
-void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int q, mat **U, mat **S, mat **V);
+void randomized_low_rank_svd4(mat *M, int kstep, int nstep, int s, mat **U, mat **S, mat **V);
 
 
 /* version 2 of ramdomized low rank SVD with autorank estimation 1 */
@@ -45,7 +45,7 @@ void pivoted_QR_of_specified_rank(mat *M, int k, int *frank, mat **Qk, mat **Rk,
 void randQB_p(mat *M, int k, int p, mat **Q, mat **B);
 
 /* randQB algorithm blocked */
-void randQB_pb(mat *M, int kstep, int nstep, int p, mat **Q, mat **B);
+void randQB_pb(mat *M, int kstep, int nstep, int p, int s, mat **Q, mat **B);
 
 /* solve A X = B where A is upper triangular matrix and X is a matrix 
 invert different ways
@@ -65,17 +65,28 @@ void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T);
 /* randomized ID of rank k */
 void id_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **I, mat **T);
 
+/* block randomized ID of rank k */
+void id_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **I, mat **T);
+
+
 /* computes two sided ID decomposition of a matrix of specified rank */
 void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat **T, mat **S);
 
 /* randomized two sided ID of rank k */
 void id_two_sided_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S);
 
+/* block randomized two sided ID of rank k */
+void id_two_sided_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S);
+
+
 /* computes a rank k cur decomposition of a matrix */
 void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R);
 
 /* computes a randomized rank k cur decomposition of a matrix */
 void cur_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, mat **C, mat **U, mat **R);
+
+/* computes a block randomized rank k cur decomposition of a matrix */
+void cur_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, mat **C, mat **U, mat **R);
 
 
 /* evaluate approximation to M using supplied low rank SVD of rank k */

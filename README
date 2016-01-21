@@ -7,9 +7,9 @@ U_k, Sigma_k, and V_k
 where U_k is mxk, Sigma_k is kxk, and V_k is nxk, such that:
 A \approx U_k Sigma_k V^T_k
 
-The rank revealing routines can compute 
-decompositions of the form 
-A \approx Q_k B_k from which other decompositions may be efficiently computed.
+Included is a blocked randomized routine which computes a so called QB 
+decompositon of A such that,  
+A \approx Q_k B_k, from which other decompositions may be efficiently computed.
 
 The interpolative decomposition routines return a single or double sided ID of a matrix, 
 while the CUR decomposition can decompose a matrix into the form A \approx C U R 
@@ -24,11 +24,13 @@ http://arxiv.org/abs/1503.07157
 There are three codes: for single processor (with GNU GSL), multiprocessor 
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 A simple implementation in Matlab (or Octave) is also provided for 
-illustration purposes. The QB algorithms are currently implemented with 
-the multi-core Intel MKL version and with the CUDA/CULA version.
+illustration purposes. The majority of the algorithms are currently implemented with 
+the multi-core Intel MKL version. The GPU version will soon receive updates 
+and additional routines as well.
 
 In addition, experimental Matlab mex-file support for the multi-core and 
-GPU C codes is available.
+GPU C codes is available with illustrating examples of calling some of the 
+multi-core and GPU functions.
 
 Written by Sergey Voronin, 2014-2016 as part of a collaborative project with Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18. Should also work 
@@ -73,8 +75,10 @@ In order to make a test matrix, use the provide make_matrix_binary.m script whic
 from Octave or Matlab. Note that this script writes a binary matrix file.
 
 Once the matrix is made one can use any of the drivers to compute the low 
-rank SVD. Inside the main loop of the programs one sets the rank k <= min(nrows,ncols) 
+rank SVD or the ID and CUR decompositions. Inside the main loop of the programs one 
+sets the rank k <= min(nrows,ncols) 
 or the tolerance parameter if one of the autorank methods is used.
+Additional parameters such as the block size apply to the block randomized methods.
 
 One can call either algorithm I,II,III, or IV for computing the low rank SVD with 
 each driver.
@@ -90,6 +94,10 @@ partial column pivoted QR (using householder reflectors),
 single vector randQB with power method, and 
 blocked randQB with power method.
 
+For the multi-core architecture, the following routines are also 
+available: ID, double sided ID, CUR in full, randomized, and 
+block randomized form.
+
 Sample calling procedure for the rsvd algorithms is as follows 
 (similar for all 3 architectures).
 
@@ -104,16 +112,24 @@ m = M->nrows; n = M->ncols;
 
 // set svd rank (< min(m,n)) if not using the autorank version
 // for autorank, define instead the TOL parameter (i.e. TOL = 0.1)
+// set power scheme and orthogonalization parameters
 k = 300;
+p = 2;
+s = 1;
 
 // call random SVD (use one of the six variants)
 randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
-randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
-randomized_low_rank_svd4(M, kblocksize, numblocks, q, &U, &S, &V);
+randomized_low_rank_svd3(M, k, p, s, &U, &S, &V);
+randomized_low_rank_svd4(M, kblocksize, numblocks, p, &U, &S, &V);
 randomized_low_rank_svd2_autorank1(M, frac, TOL, &U, &S, &V);
 randomized_low_rank_svd2_autorank2(M, kblocksize, TOL, &U, &S, &V);
 randomized_low_rank_svd3_autorank2(M, kblocksize, TOL, q, s, &U, &S, &V);
+
+// call ID, dsID, CUR block randomized routines
+id_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &T);
+id_two_sided_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &Irow, &T, &S);
+cur_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &C, &U, &R);
 
 // write results to disk
 matrix_write_to_binary_file(U, "data/U.bin");
@@ -176,3 +192,4 @@ $ matlab -nodesktop
 >> k = 2000;
 >> [U,S,V] = rsvd_cula_mex_interface2(A,500,4,2);
 >> norm(A - U*S*V')/norm(A)
+

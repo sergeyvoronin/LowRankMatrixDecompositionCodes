@@ -182,7 +182,7 @@ int main()
             // do QB blocked ----->
             printf("doing blocked QB p = 0..\n");
             gettimeofday(&start_timeval, NULL);
-            randQB_pb(M, kstep, (int)(k/kstep), 0, &Q, &B);
+            randQB_pb(M, kstep, (int)(k/kstep), 0, 1, &Q, &B);
             gettimeofday(&end_timeval, NULL);
             elapsed_secsQBb0 = get_seconds_frac(start_timeval,end_timeval);
             matrix_matrix_mult(Q,B,QB);
@@ -194,7 +194,7 @@ int main()
 
             printf("doing blocked QB p = 1..\n");
             gettimeofday(&start_timeval, NULL);
-            randQB_pb(M, kstep, (int)(k/kstep), 1, &Q, &B);
+            randQB_pb(M, kstep, (int)(k/kstep), 1, 1, &Q, &B);
             gettimeofday(&end_timeval, NULL);
             elapsed_secsQBb1 = get_seconds_frac(start_timeval,end_timeval);
             matrix_matrix_mult(Q,B,QB);
@@ -206,7 +206,7 @@ int main()
 
             printf("doing blocked QB p = 2..\n");
             gettimeofday(&start_timeval, NULL);
-            randQB_pb(M, kstep, (int)(k/kstep), 2, &Q, &B);
+            randQB_pb(M, kstep, (int)(k/kstep), 2, 1, &Q, &B);
             gettimeofday(&end_timeval, NULL);
             elapsed_secsQBb2 = get_seconds_frac(start_timeval,end_timeval);
             matrix_matrix_mult(Q,B,QB);
