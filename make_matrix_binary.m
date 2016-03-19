@@ -43,5 +43,3 @@ fprintf('writing to mat file too..\n');
 
 save(mat_file,'M');
 
-fprintf('norm(M,fro) = %f\n', norm(M,'fro'));
-

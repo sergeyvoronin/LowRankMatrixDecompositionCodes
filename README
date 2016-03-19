@@ -123,8 +123,8 @@ s = 1;
 // call random SVD (use one of the six variants)
 randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
-randomized_low_rank_svd3(M, k, p, s, &U, &S, &V);
-randomized_low_rank_svd4(M, kblocksize, numblocks, p, &U, &S, &V);
+randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);
+randomized_low_rank_svd4(M, kblocksize, numblocks, q, &U, &S, &V);
 randomized_low_rank_svd2_autorank1(M, frac, TOL, &U, &S, &V);
 randomized_low_rank_svd2_autorank2(M, kblocksize, TOL, &U, &S, &V);
 randomized_low_rank_svd3_autorank2(M, kblocksize, TOL, q, s, &U, &S, &V);
