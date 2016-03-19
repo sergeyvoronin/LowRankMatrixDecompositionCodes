@@ -1,4 +1,6 @@
-/* Intel MKL code with OpenMP */
+/* Intel MKL code with OpenMP 
+   driver 1: test low rank SVD routines
+*/
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
 #define max(x,y) (((x) > (y)) ? (x) : (y))

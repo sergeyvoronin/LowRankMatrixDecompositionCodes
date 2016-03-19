@@ -1,5 +1,5 @@
 /* 
-driver 1: use random Gaussian matrices of specified size and run full QR,
+driver 2: use random Gaussian matrices of specified size and run full QR,
 partial pivoted QR and single vector and blocked randQB algorithms
 over one or more trials and record averaged runtimes
 */

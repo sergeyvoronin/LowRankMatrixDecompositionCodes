@@ -39,58 +39,59 @@ void get_householder_matrix(vec *x, int ind1, int ind2, mat *H);
 /* partial pivoted qr via householder  - faster version, no P */
 void pivoted_QR_of_specified_rank(mat *M, int k, int *frank, mat **Qk, mat **Rk, vec **I);
 
+/* partial pivoted qr via householder of specified rank or precision */
+void pivoted_QR_of_specified_rank_or_prec(mat *M, int k, double TOL, int *frank, mat **Qk, mat **Rk, vec **I);
 
 
 /* randQB algorithm one vector at a time */
 void randQB_p(mat *M, int k, int p, mat **Q, mat **B);
 
 /* randQB algorithm blocked */
-void randQB_pb(mat *M, int kstep, int nstep, int p, int s, mat **Q, mat **B);
+void randQB_pb(mat *M, int kstep, int nstep, int q, int s, mat **Q, mat **B);
 
-/* solve A X = B where A is upper triangular matrix and X is a matrix 
-invert different ways
-1. using tridiagonal matrix system solve
-2. using inverse of tridiagonal matrix solve
-3. Use SVD of A to compute inverse 
-default: solve column by column with tridiagonal system
-*/
-//void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+/* randQB algorithm blocked */
+void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int q, int s, int *frank, mat **Q, mat **B);
 
 
 /* computes the column ID decomposition of a matrix of specified rank 
-: [I,T] = id_decomp_fixed_rank(M,k) 
 where I is the vector from the permutation and T = inv(Rk1)*Rk2 */
-void id_decomp_fixed_rank(mat *M, int k, vec **I, mat **T);
+void id_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, vec **I, mat **T);
 
 /* randomized ID of rank k */
-void id_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **I, mat **T);
+void id_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, vec **I, mat **T);
 
 /* block randomized ID of rank k */
-void id_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **I, mat **T);
+void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, int kstep, int q, int s, int *frank, vec **I, mat **T);
 
 
 /* computes two sided ID decomposition of a matrix of specified rank */
-void id_two_sided_decomp_fixed_rank(mat *M, int k, vec **Icol, vec **Irow, mat **T, mat **S);
+void id_two_sided_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, vec **Icol, vec **Irow, mat **T, mat **S);
 
 /* randomized two sided ID of rank k */
 void id_two_sided_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S);
 
 /* block randomized two sided ID of rank k */
-void id_two_sided_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, vec **Icol, vec **Irow, mat **T, mat **S);
+void id_two_sided_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, int kstep, int q, int s, int *frank, vec **Icol, vec **Irow, mat **T, mat **S);
 
 
 /* computes a rank k cur decomposition of a matrix */
-void cur_decomp_fixed_rank(mat *M, int k, mat **C, mat **U, mat **R);
+void cur_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, mat **C, mat **U, mat **R);
 
 /* computes a randomized rank k cur decomposition of a matrix */
-void cur_rand_decomp_fixed_rank(mat *M, int k, int l, int p, int s, mat **C, mat **U, mat **R);
+void cur_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, mat **C, mat **U, mat **R);
 
 /* computes a block randomized rank k cur decomposition of a matrix */
-void cur_blockrand_decomp_fixed_rank(mat *M, int k, int kstep, int estep, int p, int s, mat **C, mat **U, mat **R);
+void cur_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, int kstep, int q, int s, int *frank, mat **C, mat **U, mat **R);
 
 
 /* evaluate approximation to M using supplied low rank SVD of rank k */
 void use_low_rank_svd_for_approximation(mat *M, mat *U, mat *S, mat *V);
+
+/* evaluate approximation to M using supplied partial pivoted QR decomposition */
+void use_pivoted_QR_decomp_for_approximation(mat *M, mat *Qk, mat *Rk, vec *I);
+
+/* evaluate approximation to M using supplied QB decomposition */
+void use_QB_decomp_for_approximation(mat *M, mat *Q, mat *B);
 
 /* evaluate approximation to M using supplied column ID of rank k */
 void use_id_decomp_for_approximation(mat *M, mat *T, vec *I, int k);

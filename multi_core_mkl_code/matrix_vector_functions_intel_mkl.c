@@ -1,4 +1,5 @@
 /* high level matrix/vector functions using Intel MKL for blas */
+/* Sergey Voronin, 2014 - 2016 */
 
 #include "matrix_vector_functions_intel_mkl.h"
 
@@ -377,8 +378,8 @@ double get_matrix_max_abs_element(mat *M){
     int i;
     double val, max = 0;
     for(i=0; i<((M->nrows)*(M->ncols)); i++){
-        val = M->d[i];
-        if( fabs(val) > max )
+        val = fabs(M->d[i]);
+        if( val > max )
             max = val;
     }
     return max;
@@ -938,6 +939,21 @@ void fill_matrix_from_first_rows(mat *M, int k, mat *M_k){
 }
 
 
+/* M_k = M(:,(k+1):end) */
+void fill_matrix_from_last_rows(mat *M, int k, mat *M_k){
+    int i,ind;
+    vec *row_vec;
+    ind = 0;
+    for(i=k; i<M->nrows; i++){
+        row_vec = vector_new(M->nrows);
+        matrix_get_row(M,i,row_vec);
+        matrix_set_row(M_k,ind,row_vec);
+        vector_delete(row_vec);
+        ind++;
+    }
+}
+
+
 void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
     int i;
     vec *col_vec;
@@ -954,6 +970,7 @@ void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
 }
 
 
+/* M_k = M(:,(k+1):end) */
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
     int i,ind;
     vec *col_vec;
@@ -1022,6 +1039,31 @@ void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out){
     }
 }
 
+/* M = M(:,1:k); */
+void resize_matrix_by_columns(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new((*M)->nrows, k);
+    fill_matrix_from_first_columns(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
+}  
+
+
+/* M = M(1:k,:); */
+void resize_matrix_by_rows(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new(k, (*M)->ncols);
+    fill_matrix_from_first_rows(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
+}
+
 
 /* append matrices side by side: C = [A, B] */
 void append_matrices_horizontally(mat *A, mat *B, mat *C){
@@ -1081,8 +1123,8 @@ void append_matrices_vertically(mat *A, mat *B, mat *C){
 void vector_build_rewrapped(vec *Iinv, vec *I){
     int i,ind;
     for(i=0; i<(I->nrows); i++){
-        ind = vector_get_element(I,i);
-        vector_set_element(Iinv,ind,i);
+        ind = (int)vector_get_element(I,i);
+        vector_set_element(Iinv,ind,(double)i);
     }
 }
 

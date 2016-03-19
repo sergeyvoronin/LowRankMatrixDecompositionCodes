@@ -103,8 +103,9 @@ Sample calling procedure for the rsvd algorithms is as follows
 
 =======================
 
-// declare matrices
-mat *M, *U, *S, *V;
+// declare matrices and vectors
+mat *M, *U, *S, *V, *T, *S, *C, *R;
+vec *Icol, *Irow;
 
 // load matrix M from file
 M = matrix_load_from_binary_file(mfile);
@@ -112,9 +113,11 @@ m = M->nrows; n = M->ncols;
 
 // set svd rank (< min(m,n)) if not using the autorank version
 // for autorank, define instead the TOL parameter (i.e. TOL = 0.1)
-// set power scheme and orthogonalization parameters
+// set rank, block size, oversampling, power scheme and orthogonalization parameters
 k = 300;
-p = 2;
+kstep = 100;
+p = 20;
+q = 2;
 s = 1;
 
 // call random SVD (use one of the six variants)
@@ -127,9 +130,9 @@ randomized_low_rank_svd2_autorank2(M, kblocksize, TOL, &U, &S, &V);
 randomized_low_rank_svd3_autorank2(M, kblocksize, TOL, q, s, &U, &S, &V);
 
 // call ID, dsID, CUR block randomized routines
-id_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &T);
-id_two_sided_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &Icol, &Irow, &T, &S);
-cur_blockrand_decomp_fixed_rank(M, k, kstep, estep, p, s, &C, &U, &R);
+id_decomp_fixed_rank_or_prec(M, k, TOL, &frank, &I, &T);
+id_two_sided_blockrand_decomp_fixed_rank_or_prec(M, k, p, TOL, kstep, q, s, &frank, &Icol, &Irow, &T, &S);
+cur_blockrand_decomp_fixed_rank_or_prec(M, k, p, TOL, kstep, q, s, &frank, &C, &U, &R);
 
 // write results to disk
 matrix_write_to_binary_file(U, "data/U.bin");
