@@ -273,7 +273,6 @@ void vector_sub(vec *a, vec *b){
 /* subtract B from A and save result in A  */
 void matrix_sub(mat *A, mat *B){
     int i;
-    //#pragma omp parallel for
     #pragma omp parallel shared(A,B) private(i) 
     {
     #pragma omp for 
@@ -650,13 +649,13 @@ void matrix_get_selected_columns(mat *M, int *inds, mat *Mc){
     vec *col_vec; 
     #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
     {
+    col_vec = vector_new(M->nrows);
     #pragma omp parallel for
     for(i=0; i<(Mc->ncols); i++){
-        col_vec = vector_new(M->nrows);
         matrix_get_col(M,inds[i],col_vec);
         matrix_set_col(Mc,i,col_vec);
-        vector_delete(col_vec);
     }
+    vector_delete(col_vec);
     }
 }
 
@@ -681,13 +680,13 @@ void matrix_set_selected_columns(mat *M, int *inds, mat *Mc){
     vec *col_vec; 
     #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
     {
+    col_vec = vector_new(M->nrows); 
     #pragma omp parallel for
     for(i=0; i<(Mc->ncols); i++){
-        col_vec = vector_new(M->nrows); 
         matrix_get_col(Mc,i,col_vec);
         matrix_set_col(M,inds[i],col_vec);
-        vector_delete(col_vec);
     }
+    vector_delete(col_vec);
     }
 }
 
@@ -712,13 +711,13 @@ void matrix_get_selected_rows(mat *M, int *inds, mat *Mr){
     vec *row_vec; 
     #pragma omp parallel shared(M,Mr,inds) private(i,row_vec) 
     {
+    row_vec = vector_new(M->ncols); 
     #pragma omp parallel for
     for(i=0; i<(Mr->nrows); i++){
-        row_vec = vector_new(M->ncols); 
         matrix_get_row(M,inds[i],row_vec);
         matrix_set_row(Mr,i,row_vec);
-        vector_delete(row_vec);
     }
+    vector_delete(row_vec);
     }
 }
 
@@ -972,27 +971,35 @@ void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
 
 /* M_k = M(:,(k+1):end) */
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
-    int i,ind;
+    int i;
     vec *col_vec;
-    ind = 0;
-    for(i=k; i<M->ncols; i++){
+    #pragma omp parallel shared(M,M_k,k) private(i,col_vec) 
+    {
+    #pragma omp for
+    for(i=0; i<(M->ncols - k); i++){
         col_vec = vector_new(M->nrows);
-        matrix_get_col(M,i,col_vec);
-        matrix_set_col(M_k,ind,col_vec);
+        matrix_get_col(M,i+k,col_vec);
+        matrix_set_col(M_k,i,col_vec);
         vector_delete(col_vec);
-        ind++;
+    }
     }
 }
+
+
 
 /* M_k = M(:,I(1:k)) */
 void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
     int i;
     vec *col_vec;
+    #pragma omp parallel shared(M,M_k,I,k) private(i,col_vec)
+    { 
+    #pragma omp for
     for(i=0; i<k; i++){
         col_vec = vector_new(M->nrows);
         matrix_get_col(M,vector_get_element(I,i),col_vec);
         matrix_set_col(M_k,i,col_vec);
         vector_delete(col_vec);
+    }
     }
 }
 
@@ -1001,26 +1008,33 @@ void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
 void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k){
     int i;
     vec *row_vec;
+    #pragma omp parallel shared(M,M_k,I,k) private(i,row_vec)
+    {
+    #pragma omp for
     for(i=0; i<k; i++){
         row_vec = vector_new(M->ncols);
         matrix_get_row(M,(int)vector_get_element(I,i),row_vec);
         matrix_set_row(M_k,i,row_vec);
         vector_delete(row_vec);
     }
+    }
 }
 
 
 
 void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k){
-    int i,ind;
+    int i,ind=0;
     vec *col_vec;
-    ind = 0;
+    //#pragma omp parallel shared(M,M_k,I,k,ind) private(i,col_vec)
+    {
+    //#pragma omp for
     for(i=k; i<M->ncols; i++){
         col_vec = vector_new(M->nrows);
         matrix_get_col(M,vector_get_element(I,i),col_vec);
         matrix_set_col(M_k,ind,col_vec);
-        vector_delete(col_vec);
         ind++;
+        vector_delete(col_vec);
+    }
     }
 }
 
@@ -1105,16 +1119,24 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C){
 void append_matrices_vertically(mat *A, mat *B, mat *C){
     int i,j;
 
+    #pragma omp parallel shared(C,A) private(i) 
+    {
+    #pragma omp for 
     for(i=0; i<A->nrows; i++){
         for(j=0; j<A->ncols; j++){
             matrix_set_element(C,i,j,matrix_get_element(A,i,j));
         }
     }
+    }
 
+    #pragma omp parallel shared(C,B,A) private(i) 
+    {
+    #pragma omp for 
     for(i=0; i<B->nrows; i++){
         for(j=0; j<B->ncols; j++){
             matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
         }
+    }
     }
 }
 

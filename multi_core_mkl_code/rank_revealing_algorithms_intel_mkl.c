@@ -1196,7 +1196,7 @@ void randQB_pb(mat *M, int kstep, int nstep, int p, int s, mat **Q, mat **B){
 inputs: matrix M, integer kstep (block size), integer nstep (number of blocks), power scheme parameter p [ integer (>=0) ], orthogonalization amount in power scheme parameter s
 outputs: matrices Q and B s.t. M \approx Q*B 
 */
-void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int p, int s, int *frank, mat **Q, mat **B){
+void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int q, int s, int *frank, mat **Q, mat **B){
     int i,j,m,n,l,step;
     int rankMode,tolMode;
     double dotp,normval,elapsed_time;
@@ -1225,9 +1225,14 @@ void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int p, int s, int *
 
     // build random matrix
     //printf("form RN..\n");
+    gettimeofday(&start_timeval, NULL);
     l = kstep*nstep;
     RN = matrix_new(n, l);
     initialize_random_matrix(RN);
+    gettimeofday(&end_timeval, NULL);
+    elapsed_time = get_seconds_frac(start_timeval,end_timeval);
+    //printf("randQB elapsed time for build RN is: %f\n", elapsed_time);
+
 
     // set up mats
     A = matrix_new(m,n);
@@ -1265,7 +1270,7 @@ void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int p, int s, int *
 
         // power method
         gettimeofday(&start_timeval, NULL);
-        for(j=1; j<=p; j++){
+        for(j=1; j<=q; j++){
             if((2*j-2) % s == 0){
                 QR_factorization_getQ(Yp, Qp);
                 matrix_transpose_matrix_mult(A,Qp,AtQp);
@@ -1292,7 +1297,7 @@ void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int p, int s, int *
 
         //printf("project Qp..\n");
         // project Qp away from previous Q stuff
-        if(step>0){
+        if(step>0 && (step % 2 == 0)){
             gettimeofday(&start_timeval, NULL);
             inds_global = (int*)malloc(step*kstep*sizeof(int));
             Qj = matrix_new(m,step*kstep);
@@ -1550,6 +1555,11 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     mat *Qk, *Rk, *Rk1, *Rk2;
     int rankMode,tolMode;
     int nstep = ceil((k+p)/kstep);
+    
+    double elapsed_secs;
+    struct timeval start_timeval, end_timeval;
+
+
     if(k<=0){
         rankMode = 0; tolMode = 1;
         nstep = 0;
@@ -1557,7 +1567,12 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
         rankMode = 1; tolMode = 0;
     }
 
+    gettimeofday(&start_timeval, NULL);
     randQB_pb_new(M, kstep, nstep, TOL, q, s, frank, &Q, &B);
+    gettimeofday(&end_timeval, NULL);
+    elapsed_secs = get_seconds_frac(start_timeval,end_timeval);
+    //printf("elapsed time for randQB_pb_new is: %f\n", elapsed_secs);
+ 
 
     //printf("running LAPACK QR on oversampled B with rank frank..\n");
     m = B->nrows; 
@@ -1573,6 +1588,7 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
         *frank = round((double)(*frank/(*frank + p + 1e-6))*(*frank));
     }
 
+    gettimeofday(&start_timeval, NULL);
     Rk1 = matrix_new(*frank,*frank);
     Rk2 = matrix_new(*frank,n-*frank);
     fill_matrix_from_first_columns(Rk, *frank, Rk1);
@@ -1584,7 +1600,10 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     // %Rk1*T = Rk2
     matrix_keep_only_upper_triangular(Rk1);
     upper_triangular_system_solve(Rk1,Rk2,*T,1);
-
+    gettimeofday(&end_timeval, NULL);
+    elapsed_secs = get_seconds_frac(start_timeval,end_timeval);
+    //printf("elapsed time for solving for T is: %f\n", elapsed_secs);
+ 
     matrix_delete(Rk1);
     matrix_delete(Rk2);
 }
