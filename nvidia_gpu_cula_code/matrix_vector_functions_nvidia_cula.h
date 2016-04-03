@@ -13,6 +13,14 @@
 #include <sys/time.h> // for clock_gettime()
 #include <cuda_runtime.h>
 
+#include "mkl.h"
+#include "mkl_lapacke.h"
+#include "mkl_vsl.h"
+
+#define SEED    777
+#define BRNG    VSL_BRNG_MCG31
+#define METHOD  VSL_RNG_METHOD_GAUSSIAN_ICDF
+
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
 #define max(x,y) (((x) > (y)) ? (x) : (y))
@@ -70,7 +78,7 @@ void matrix_print(mat * M);
 /* print to terminal */
 void vector_print(vec * v);
 
-
+/* v(:) = data */
 void vector_set_data(vec *v, double *data);
 
 
@@ -85,6 +93,11 @@ void matrix_scale(mat *M, double scalar);
 /* compute euclidean norm of vector */
 double vector_get2norm(vec *v);
 
+/* min value and index of vector */
+void vector_get_min_element(vec *v, int *minindex, double *minval);
+
+/* max value and index of vector */
+void vector_get_max_element(vec *v, int *maxindex, double *maxval);
 
 /* copy contents of vec s to d  */
 void vector_copy(vec *d, vec *s);
@@ -207,6 +220,9 @@ void initialize_identity_matrix(mat *D);
 void invert_diagonal_matrix(mat *Dinv, mat *D);
 
 
+/* overwrites supplied upper triangular matrix by its inverse */
+void invert_upper_triangular_matrix(mat *Minv);
+
 
 /* returns the dot product of two vectors */
 double vector_dot_product(vec *u, vec *v);
@@ -255,9 +271,11 @@ void matrix_copy_all_rows_and_last_columns_from_indexk(mat *M_out, mat *M, int k
 
 void fill_matrix_from_first_rows(mat *M, int k, mat *M_k);
 
+/* M_k = M(:,(k+1):end) */
+void fill_matrix_from_last_rows(mat *M, int k, mat *M_k);
+
 
 void fill_matrix_from_first_columns(mat *M, int k, mat *M_k);
-
 
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
 
@@ -265,9 +283,24 @@ void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out);
 
 
+/* M_k = M(:,I(1:k)) */
+void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k);
+
+/* M_k = M(I(1:k),:) */
+void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k);
+ 
+
+void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k);
+
+
+/* M = M(:,1:k); */
+void resize_matrix_by_columns(mat **M, int k);
+
+/* M = M(1:k,:); */
+void resize_matrix_by_rows(mat **M, int k);
+
+
 //void fill_matrix_from_column_list(mat *M, vec *I, mat *M_k);
-
-
 //void fill_matrix_from_row_list(mat *M, vec *I, mat *M_k);
 
 
@@ -275,6 +308,9 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C);
 
  
 void append_matrices_vertically(mat *A, mat *B, mat *C);
+
+/* Iinv(I)=[0:length(I)-1] */
+void vector_build_rewrapped(vec *Iinv, vec *I);
 
 
 /* calculate percent error between A and B: 100*norm(A - B)/norm(A) */
@@ -315,6 +351,17 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
 /* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P);
 
+/* P = C * U * R */
+void form_cur_product_matrix(mat *C, mat *U, mat *R, mat *P);
+
+/* solve A X = B with A upper triangular */
+void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type);
+
+/* solve A X = B with A square matrix */
+void square_matrix_system_solve(mat *A, mat *X, mat *B);
+
+/* get seconds for recording runtime */
+double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval);
 
 /* cula error status */
 void checkStatus(culaStatus status);

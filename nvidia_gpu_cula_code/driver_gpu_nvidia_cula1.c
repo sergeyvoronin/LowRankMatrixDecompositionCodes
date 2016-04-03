@@ -1,45 +1,39 @@
-/*
- * cula gpu code with host openmp 
- */
+/* Intel MKL code with OpenMP 
+   driver 1: test low rank SVD routines
+*/
+
+#define min(x,y) (((x) < (y)) ? (x) : (y))
+#define max(x,y) (((x) > (y)) ? (x) : (y))
+
 #include "rank_revealing_algorithms_nvidia_cula.h"
 
-
-int main(int argc, char** argv){
-    int i, j, m, n, k, culaVersion;
+int main()
+{
+    int i, j, m, n, k;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat_2kx4k.bin";
-    //char *M_file = "../data/A_mat_5kx2k.bin";
+    //char *M_file = "../data/A_mat_6kx12k.bin";
+    char *M_file = "../data/A_mat_1kx2k.bin";
 
-    culaStatus status;
-
-    printf("Initializing CULA\n");
-    status = culaInitialize();
-    checkStatus(status);
-
-    culaVersion = culaGetVersion();
-    printf("culaVersion is %d\n", culaVersion);
-    
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
     m = M->nrows;
     n = M->ncols;
     printf("sizes of M are %d by %d\n", m, n);
 
-
     // now test low rank SVD of M..
-    k = 1000;
+    k = 200;
     
     printf("calling random SVD..\n");
     time(&start_time);
-    //randomized_low_rank_svd1(M, k, U, S, V);
-    //randomized_low_rank_svd2(M, k, U, S, V);
-    //randomized_low_rank_svd3(M, k, 10, 1, U, S, V);
-    randomized_low_rank_svd4(M, 100, round(k/100), 2, &U, &S, &V);
-    //randomized_low_rank_svd2_autorank1(M, 0.5, 0.005, &U, &S, &V);
-    //randomized_low_rank_svd2_autorank2(M, 200, 0.5, &U, &S, &V);
-    //randomized_low_rank_svd3_autorank2(M, 400, 0.5, 5, 1, &U, &S, &V);
+    //randomized_low_rank_svd1(M, k, &U, &S, &V);
+    //randomized_low_rank_svd2(M, k, &U, &S, &V);
+    //randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
+    randomized_low_rank_svd4(M, 200, round(k/200), 2, &U, &S, &V);
+    //randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
+    //randomized_low_rank_svd2_autorank2(M, 500, 0.5, &U, &S, &V);
+    //randomized_low_rank_svd3_autorank2(M, 500, 0.5, 5, 1, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
@@ -61,16 +55,12 @@ int main(int argc, char** argv){
 
 
     // delete and exit
+    printf("delete and exit..\n");
     matrix_delete(M);
     matrix_delete(U);
     matrix_delete(S);
     matrix_delete(V);
     matrix_delete(P);
- 
 
-    printf("Shutting down CULA\n");
-    culaShutdown();
-
-    return EXIT_SUCCESS;
+    return 0;
 }
-

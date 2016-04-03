@@ -1,5 +1,5 @@
-/* high level matrix/vector functions using NVIDIA CULA library for blas 
-this uses the device versions of the CULA functions with host openmp*/
+/* high level matrix/vector functions using Intel MKL for blas */
+/* Sergey Voronin, 2014 - 2016 */
 
 #include "matrix_vector_functions_nvidia_cula.h"
 
@@ -76,7 +76,7 @@ mat * matrix_load_from_binary_file(char *fname){
     size_t one = 1;
     FILE *fp;
     mat *M;
-    
+
     fp = fopen(fname,"r");
     fread(&num_rows,sizeof(int),one,fp); //read m
     fread(&num_columns,sizeof(int),one,fp); //read n
@@ -95,6 +95,7 @@ mat * matrix_load_from_binary_file(char *fname){
 
     return M;
 }
+  
 
 
 /* write matrix to binary file 
@@ -268,7 +269,6 @@ void vector_sub(vec *a, vec *b){
 /* subtract B from A and save result in A  */
 void matrix_sub(mat *A, mat *B){
     int i;
-    //#pragma omp parallel for
     #pragma omp parallel shared(A,B) private(i) 
     {
     #pragma omp for 
@@ -305,6 +305,35 @@ double vector_get2norm(vec *v){
     }
     return sqrt(normval);
 }
+
+
+void vector_get_min_element(vec *v, int *minindex, double *minval){
+    int i, val;
+    *minindex = 0;
+    *minval = v->d[0];
+    for(i=0; i<(v->nrows); i++){
+        val = v->d[i];
+        if(val < *minval){
+            *minval = val;
+            *minindex = i;
+        }
+    }
+}
+
+
+void vector_get_max_element(vec *v, int *maxindex, double *maxval){
+    int i, val;
+    *maxindex = 0;
+    *maxval = v->d[0];
+    for(i=0; i<(v->nrows); i++){
+        val = v->d[i];
+        if(val > *maxval){
+            *maxval = val;
+            *maxindex = i;
+        }
+    }
+}
+
 
 
 /* returns the dot product of two vectors */
@@ -344,8 +373,8 @@ double get_matrix_max_abs_element(mat *M){
     int i;
     double val, max = 0;
     for(i=0; i<((M->nrows)*(M->ncols)); i++){
-        val = M->d[i];
-        if( fabs(val) > max )
+        val = fabs(M->d[i]);
+        if( val > max )
             max = val;
     }
     return max;
@@ -423,20 +452,33 @@ void compute_matrix_column_norms(mat *M, vec *column_norms){
 
 /* initialize a random matrix */
 void initialize_random_matrix(mat *M){
-    int i,m,n,N;
+    int i,m,n;
     double val;
     m = M->nrows;
     n = M->ncols;
-    N = m*n;
+    float a=0.0,sigma=1.0;
+    int N = m*n;
+    float *r;
+    VSLStreamStatePtr stream;
+    
+    r = (float*)malloc(N*sizeof(float));
+   
+    vslNewStream( &stream, BRNG,  time(NULL) );
+    //vslNewStream( &stream, BRNG,  SEED );
 
-    // seed 
-    srand(time(NULL));
+    vsRngGaussian( METHOD, stream, N, r, a, sigma );
 
     // read and set elements
+    #pragma omp parallel shared(M,N,r) private(i,val) 
+    {
+    #pragma omp parallel for
     for(i=0; i<N; i++){
-        val = ((double) rand() / (RAND_MAX));
+        val = r[i];
         M->d[i] = val;
     }
+    }
+    
+    free(r);
 }
 
 
@@ -482,12 +524,16 @@ void invert_diagonal_matrix(mat *Dinv, mat *D){
 }
 
 
+/* overwrites supplied upper triangular matrix by its inverse */
+void invert_upper_triangular_matrix(mat *Minv){
+    LAPACKE_dtrtri( LAPACK_COL_MAJOR, 'U', 'N', Minv->nrows, Minv->d, Minv->nrows);
+}
+
 
 /* C = A*B ; column major */
 void matrix_matrix_mult(mat *A, mat *B, mat *C){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
-    //cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, A->nrows, B->ncols, A->ncols, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
 // cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, A->nrows, B->ncols, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
     culaDgemm('N', 'N', A->nrows, B->ncols, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
 }
@@ -497,9 +543,7 @@ void matrix_matrix_mult(mat *A, mat *B, mat *C){
 void matrix_transpose_matrix_mult(mat *A, mat *B, mat *C){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
-    //cblas_dgemm(CblasRowMajor, CblasTrans, CblasNoTrans, A->ncols, B->ncols, A->nrows, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
     //cblas_dgemm(CblasColMajor, CblasTrans, CblasNoTrans, A->ncols, B->ncols, A->nrows, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
-
     culaDgemm('T', 'N', A->ncols, B->ncols, A->nrows, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
 }
 
@@ -509,6 +553,11 @@ void matrix_matrix_transpose_mult(mat *A, mat *B, mat *C){
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
     //cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, A->nrows, B->nrows, A->ncols, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
+    //culaDgemm('N', 'T', A->nrows, B->nrows, A->ncols, alpha, A->d, A->ncols, B->d, B->nrows, beta, C->d, C->ncols);
+    //cblas_dgemm(CblasColMajor, CblasNoTrans, CblasTrans, A->nrows, B->nrows, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
+    
+    //culaDgemm('N', 'T', A->nrows, B->nrows, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
+    //culaDgemm('N', 'T', A->nrows, B->nrows, A->ncols, alpha, A->d, A->ncols, B->d, B->ncols, beta, C->d, C->ncols);
     culaDgemm('N', 'T', A->nrows, B->nrows, A->ncols, alpha, A->d, A->nrows, B->d, B->nrows, beta, C->d, C->nrows);
 }
 
@@ -524,12 +573,12 @@ void matrix_vector_mult(mat *M, vec *x, vec *y){
 
 /* y = M^T*x ; column major */
 void matrix_transpose_vector_mult(mat *M, vec *x, vec *y){
-    //gsl_blas_dgemv (CblasNoTrans, 1.0, M, x, 0.0, y);
     double alpha, beta;
     alpha = 1.0; beta = 0.0;
     //cblas_dgemv (CblasRowMajor, CblasTrans, M->nrows, M->ncols, alpha, M->d, M->ncols, x->d, 1, beta, y->d, 1);
     culaDgemv ('T', M->nrows, M->ncols, alpha, M->d, M->nrows, x->d, 1, beta, y->d, 1);
 }
+
 
 
 /* set column of matrix to vector */
@@ -584,22 +633,48 @@ void matrix_set_row(mat *M, int i, vec *row_vec){
 }
 
 
+
+/* Mc = M(:,inds) */
+/*void matrix_get_selected_columns(mat *M, int *inds, mat *Mc){
+    int i;
+    vec *col_vec = vector_new(M->nrows); 
+    for(i=0; i<(Mc->ncols); i++){
+        matrix_get_col(M,inds[i],col_vec);
+        matrix_set_col(Mc,i,col_vec);
+    }
+    vector_delete(col_vec);
+}*/
+
+
 /* Mc = M(:,inds) */
 void matrix_get_selected_columns(mat *M, int *inds, mat *Mc){
     int i;
     vec *col_vec; 
     #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
     {
+    col_vec = vector_new(M->nrows);
     #pragma omp parallel for
     for(i=0; i<(Mc->ncols); i++){
-        col_vec = vector_new(M->nrows);
         matrix_get_col(M,inds[i],col_vec);
         matrix_set_col(Mc,i,col_vec);
-        vector_delete(col_vec);
     }
+    vector_delete(col_vec);
     }
 }
 
+
+
+
+/* M(:,inds) = Mc */
+/*void matrix_set_selected_columns(mat *M, int *inds, mat *Mc){
+    int i;
+    vec *col_vec = vector_new(M->nrows); 
+    for(i=0; i<(Mc->ncols); i++){
+        matrix_get_col(Mc,i,col_vec);
+        matrix_set_col(M,inds[i],col_vec);
+    }
+    vector_delete(col_vec);
+}*/
 
 
 /* M(:,inds) = Mc */
@@ -608,15 +683,29 @@ void matrix_set_selected_columns(mat *M, int *inds, mat *Mc){
     vec *col_vec; 
     #pragma omp parallel shared(M,Mc,inds) private(i,col_vec) 
     {
+    col_vec = vector_new(M->nrows); 
     #pragma omp parallel for
     for(i=0; i<(Mc->ncols); i++){
-        col_vec = vector_new(M->nrows); 
         matrix_get_col(Mc,i,col_vec);
         matrix_set_col(M,inds[i],col_vec);
-        vector_delete(col_vec);
     }
+    vector_delete(col_vec);
     }
 }
+
+
+
+/* Mr = M(inds,:) */
+/*void matrix_get_selected_rows(mat *M, int *inds, mat *Mr){
+    int i;
+    vec *row_vec = vector_new(M->ncols); 
+    for(i=0; i<(Mr->nrows); i++){
+        matrix_get_row(M,inds[i],row_vec);
+        matrix_set_row(Mr,i,row_vec);
+    }
+    vector_delete(row_vec);
+}*/
+
 
 
 /* Mr = M(inds,:) */
@@ -625,15 +714,29 @@ void matrix_get_selected_rows(mat *M, int *inds, mat *Mr){
     vec *row_vec; 
     #pragma omp parallel shared(M,Mr,inds) private(i,row_vec) 
     {
+    row_vec = vector_new(M->ncols); 
     #pragma omp parallel for
     for(i=0; i<(Mr->nrows); i++){
-        row_vec = vector_new(M->ncols); 
         matrix_get_row(M,inds[i],row_vec);
         matrix_set_row(Mr,i,row_vec);
-        vector_delete(row_vec);
     }
+    vector_delete(row_vec);
     }
 }
+
+
+
+/* M(inds,:) = Mr */
+/*void matrix_set_selected_rows(mat *M, int *inds, mat *Mr){
+    int i;
+    vec *row_vec = vector_new(M->ncols); 
+    for(i=0; i<(Mr->nrows); i++){
+        matrix_get_row(Mr,i,row_vec);
+        matrix_set_row(M,inds[i],row_vec);
+    }
+    vector_delete(row_vec);
+}*/
+
 
 
 /* M(inds,:) = Mr */
@@ -682,6 +785,8 @@ void matrix_keep_only_upper_triangular(mat *M){
         }
     }
 }
+
+
 
 
 
@@ -781,7 +886,6 @@ void matrix_copy_first_columns(mat *M_out, mat *M){
     }
 } 
 
-
 /* copy contents of mat S to D */
 void matrix_copy_first_columns_with_param(mat *D, mat *S, int num_columns){
     int i,j;
@@ -799,6 +903,7 @@ M_out = M(1:k,1:k) */
 void matrix_copy_first_k_rows_and_columns(mat *M_out, mat *M){
     int i,j,k;
     k = M_out->ncols;
+    vec * col_vec;
     for(i=0; i<k; i++){
         for(j=0; j<k; j++){
             matrix_set_element(M_out,i,j,matrix_get_element(M,i,j));
@@ -810,6 +915,7 @@ void matrix_copy_first_k_rows_and_columns(mat *M_out, mat *M){
 /* M_out = M(:,k+1:end) */
 void matrix_copy_all_rows_and_last_columns_from_indexk(mat *M_out, mat *M, int k){
     int i,j,i_out,j_out;
+    vec * col_vec;
     for(i=0; i<(M->nrows); i++){
         for(j=k; j<(M->ncols); j++){
             i_out = i; j_out = j - k;
@@ -835,6 +941,21 @@ void fill_matrix_from_first_rows(mat *M, int k, mat *M_k){
 }
 
 
+/* M_k = M(:,(k+1):end) */
+void fill_matrix_from_last_rows(mat *M, int k, mat *M_k){
+    int i,ind;
+    vec *row_vec;
+    ind = 0;
+    for(i=k; i<M->nrows; i++){
+        row_vec = vector_new(M->nrows);
+        matrix_get_row(M,i,row_vec);
+        matrix_set_row(M_k,ind,row_vec);
+        vector_delete(row_vec);
+        ind++;
+    }
+}
+
+
 void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
     int i;
     vec *col_vec;
@@ -851,18 +972,75 @@ void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
 }
 
 
+/* M_k = M(:,(k+1):end) */
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
-    int i,ind;
+    int i;
     vec *col_vec;
-    ind = 0;
-    for(i=k; i<M->ncols; i++){
+    #pragma omp parallel shared(M,M_k,k) private(i,col_vec) 
+    {
+    #pragma omp for
+    for(i=0; i<(M->ncols - k); i++){
         col_vec = vector_new(M->nrows);
-        matrix_get_col(M,i,col_vec);
-        matrix_set_col(M_k,ind,col_vec);
+        matrix_get_col(M,i+k,col_vec);
+        matrix_set_col(M_k,i,col_vec);
         vector_delete(col_vec);
-        ind++;
+    }
     }
 }
+
+
+
+/* M_k = M(:,I(1:k)) */
+void fill_matrix_from_first_columns_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i;
+    vec *col_vec;
+    #pragma omp parallel shared(M,M_k,I,k) private(i,col_vec)
+    { 
+    #pragma omp for
+    for(i=0; i<k; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,vector_get_element(I,i),col_vec);
+        matrix_set_col(M_k,i,col_vec);
+        vector_delete(col_vec);
+    }
+    }
+}
+
+
+/* M_k = M(I(1:k),:) */
+void fill_matrix_from_first_rows_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i;
+    vec *row_vec;
+    #pragma omp parallel shared(M,M_k,I,k) private(i,row_vec)
+    {
+    #pragma omp for
+    for(i=0; i<k; i++){
+        row_vec = vector_new(M->ncols);
+        matrix_get_row(M,(int)vector_get_element(I,i),row_vec);
+        matrix_set_row(M_k,i,row_vec);
+        vector_delete(row_vec);
+    }
+    }
+}
+
+
+
+void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k){
+    int i,ind=0;
+    vec *col_vec;
+    //#pragma omp parallel shared(M,M_k,I,k,ind) private(i,col_vec)
+    {
+    //#pragma omp for
+    for(i=k; i<M->ncols; i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,vector_get_element(I,i),col_vec);
+        matrix_set_col(M_k,ind,col_vec);
+        ind++;
+        vector_delete(col_vec);
+    }
+    }
+}
+
 
 
 /* Mout = M((k+1):end,(k+1):end) in matlab notation */
@@ -876,6 +1054,31 @@ void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out){
             matrix_set_element(M_out,i_out,j_out,matrix_get_element(M,i,j));
         }
     }
+}
+
+/* M = M(:,1:k); */
+void resize_matrix_by_columns(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new((*M)->nrows, k);
+    fill_matrix_from_first_columns(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
+}  
+
+
+/* M = M(1:k,:); */
+void resize_matrix_by_rows(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new(k, (*M)->ncols);
+    fill_matrix_from_first_rows(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
 }
 
 
@@ -916,6 +1119,32 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C){
 
 
 /* append matrices vertically: C = [A; B] */
+/*void append_matrices_vertically(mat *A, mat *B, mat *C){
+    int i,j;
+
+    #pragma omp parallel shared(C,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+    }
+
+    #pragma omp parallel shared(C,B,A) private(i) 
+    {
+    #pragma omp for 
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
+        }
+    }
+    }
+}*/
+
+
+/* append matrices vertically: C = [A; B] */
 void append_matrices_vertically(mat *A, mat *B, mat *C){
     int i,j;
 
@@ -933,6 +1162,16 @@ void append_matrices_vertically(mat *A, mat *B, mat *C){
 }
 
 
+
+
+/* builds Iinv(I) = [0:n-1] */
+void vector_build_rewrapped(vec *Iinv, vec *I){
+    int i,ind;
+    for(i=0; i<(I->nrows); i++){
+        ind = (int)vector_get_element(I,i);
+        vector_set_element(Iinv,ind,(double)i);
+    }
+}
 
 
 /* compute evals and evecs of symmetric matrix M
@@ -955,7 +1194,7 @@ void compact_QR_factorization(mat *M, mat *Q, mat *R){
     vec *tau = vector_new(m);
 
     // get R
-    //LAPACKE_dgeqrf(CblasRowMajor, m, n, R_full->d, n, tau->d);
+    //LAPACKE_dgeqrf(LAPACK_COL_MAJOR, R_full->nrows, R_full->ncols, R_full->d, R_full->nrows, tau->d);
     culaDgeqrf(m, n, R_full->d, m, tau->d);
     
     for(i=0; i<k; i++){
@@ -968,15 +1207,13 @@ void compact_QR_factorization(mat *M, mat *Q, mat *R){
 
     // get Q
     matrix_copy(Q,R_full); 
-    //LAPACKE_dorgqr(CblasRowMajor, m, n, n, Q->d, n, tau->d);
+    //LAPACKE_dorgqr(LAPACK_COL_MAJOR, Q->nrows, Q->ncols, min(Q->ncols,Q->nrows), Q->d, Q->nrows, tau->d);
     culaDorgqr(m, n, n, Q->d, m, tau->d);
 
     // clean up
     matrix_delete(R_full);
     vector_delete(tau);
 }
-
-
 
 
 /* returns Q from [Q,R] = qr(M,'0') compact QR factorization 
@@ -1011,10 +1248,10 @@ void singular_value_decomposition(mat *M, mat *U, mat *S, mat *Vt){
 
 
 
+
+/* P = U * S * Vt */
 void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
     int k,m,n;
-    double alpha, beta;
-    alpha = 1.0; beta = 0.0;
     m = P->nrows;
     n = P->ncols;
     k = S->nrows;
@@ -1025,6 +1262,26 @@ void form_svd_product_matrix(mat *U, mat *S, mat *V, mat *P){
 
     // form P = U*S*V^T
     matrix_matrix_mult(U,SVt,P);
+
+    matrix_delete(SVt);
+}
+
+
+/* P = C * U * R */
+void form_cur_product_matrix(mat *C, mat *U, mat *R, mat *P){
+    int k,m,n;
+    m = P->nrows;
+    n = P->ncols;
+    k = U->nrows;
+    mat * CU = matrix_new(m,k);
+
+    // form CU = C*U
+    matrix_matrix_mult(C,U,CU);
+
+    // form P = CU*R
+    matrix_matrix_mult(CU,R,P);
+
+    matrix_delete(CU);
 }
 
 
@@ -1159,6 +1416,77 @@ void estimate_rank_and_buildQ2(mat *M, int kblock, double TOL, mat **Y, mat **Q,
 }
 
 
+/* solve A X = B where A is upper triangular matrix and X is a matrix 
+invert different ways
+1. using tridiagonal matrix system solve
+2. using inverse of tridiagonal matrix solve
+3. Use SVD of A to compute inverse 
+default: solve column by column with tridiagonal system
+*/
+void upper_triangular_system_solve(mat *A, mat *B, mat *X, int solve_type){
+    int j;
+    double alpha = 1.0;
+    vec *col_vec;
+    mat *S;
+
+    //printf("A is %d by %d\n", A->nrows, A->ncols);
+    //printf("X is %d by %d\n", X->nrows, X->ncols);
+    //printf("B is %d by %d\n", B->nrows, B->ncols);
+
+    if(solve_type == 1){
+        S = matrix_new(B->nrows,B->ncols);
+        matrix_copy(S,B);
+        cblas_dtrsm(CblasColMajor, CblasLeft, CblasUpper, CblasNoTrans, CblasNonUnit, B->nrows, B->ncols, alpha, A->d, A->nrows, S->d, S->nrows);
+        matrix_copy(X,S);
+        matrix_delete(S);
+    }
+    else if(solve_type == 2){
+        invert_upper_triangular_matrix(A);
+        matrix_matrix_mult(A,B,X);
+    }
+    else if(solve_type == 3){
+        mat *U, *S, *Sinv, *Vt, *SinvUt, *VSinvUt;
+        U = matrix_new(A->nrows, A->nrows);
+        S = matrix_new(A->nrows, A->nrows);
+        Sinv = matrix_new(A->nrows, A->nrows);
+        Vt = matrix_new(A->nrows, A->nrows);
+        SinvUt = matrix_new(A->nrows, A->nrows);
+        VSinvUt = matrix_new(A->nrows, A->nrows);
+        //singular_value_decomposition(A, &U, &S, &Vt);
+        singular_value_decomposition(A, U, S, Vt);
+        invert_diagonal_matrix(Sinv,S);
+        matrix_matrix_transpose_mult(Sinv,U,SinvUt); 
+        matrix_transpose_matrix_mult(Vt,SinvUt,VSinvUt);
+        matrix_matrix_mult(VSinvUt, B, X);
+    }
+    else{
+        col_vec = vector_new(B->nrows);
+        for(j=0; j<B->ncols; j++){
+            matrix_get_col(B,j,col_vec);
+            cblas_dtrsv (CblasColMajor, CblasUpper, CblasNoTrans, CblasNonUnit, A->ncols, A->d, A->ncols, col_vec->d, 1);
+            matrix_set_col(X,j,col_vec);     
+        }
+        vector_delete(col_vec);
+    }
+}
+
+
+void square_matrix_system_solve(mat *A, mat *X, mat *B){
+    //LAPACKE_dtrtri( LAPACK_COL_MAJOR, 'U', 'N', Minv->nrows, Minv->d, Minv->nrows);
+    int * ipiv = (int*)malloc((A->nrows)*sizeof(int)); 
+    LAPACKE_dgesv(LAPACK_COL_MAJOR , A->nrows , B->ncols , A->d , A->ncols , ipiv , B->d , B->ncols );
+    matrix_copy(X,B);
+    free(ipiv);
+}
+
+
+double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval){
+    long secs_used, micros_used;
+    secs_used=(end_timeval.tv_sec - start_timeval.tv_sec);
+    micros_used= ((secs_used*1000000) + end_timeval.tv_usec) - (start_timeval.tv_usec);
+    return (micros_used/1e6); 
+}
+
 /* cula error status */
 void checkStatus(culaStatus status)
 {
@@ -1172,13 +1500,5 @@ void checkStatus(culaStatus status)
 
     culaShutdown();
     exit(EXIT_FAILURE);
-}
-
-
-double get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval){
-    long secs_used, micros_used;
-    secs_used=(end_timeval.tv_sec - start_timeval.tv_sec);
-    micros_used= ((secs_used*1000000) + end_timeval.tv_usec) - (start_timeval.tv_usec);
-    return (micros_used/1e6); 
 }
 
