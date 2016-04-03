@@ -1,4 +1,4 @@
-/* Intel MKL code with OpenMP 
+/* NVIDIA CULA code interfaced with Intel MKL code with OpenMP 
    driver 1: test low rank SVD routines
 */
 
@@ -9,12 +9,22 @@
 
 int main()
 {
-    int i, j, m, n, k;
+    int i, j, m, n, k, culaVersion;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    //char *M_file = "../data/A_mat_6kx12k.bin";
-    char *M_file = "../data/A_mat_1kx2k.bin";
+    char *M_file = "../data/A_mat_6kx12k.bin";
+    //char *M_file = "../data/A_mat_1kx2k.bin";
+    culaStatus status;
+
+    printf("Initializing CULA\n");
+    status = culaInitialize();
+    checkStatus(status);
+
+    culaVersion = culaGetVersion();
+    printf("culaVersion is %d\n", culaVersion);
+ 
+
 
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
@@ -62,5 +72,8 @@ int main()
     matrix_delete(V);
     matrix_delete(P);
 
-    return 0;
+    printf("Shutting down CULA\n");
+    culaShutdown();
+
+    return EXIT_SUCCESS;
 }

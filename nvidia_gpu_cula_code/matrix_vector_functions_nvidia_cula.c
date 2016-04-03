@@ -1,4 +1,5 @@
-/* high level matrix/vector functions using Intel MKL for blas */
+/* high level matrix/vector functions using CULA for BLAS/LAPACK where possible 
+and Intel MKL for rest of the functions */
 /* Sergey Voronin, 2014 - 2016 */
 
 #include "matrix_vector_functions_nvidia_cula.h"

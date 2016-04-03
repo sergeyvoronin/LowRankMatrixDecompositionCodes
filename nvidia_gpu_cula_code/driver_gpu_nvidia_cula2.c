@@ -9,7 +9,7 @@ over one or more trials and record averaged runtimes
 
 int main()
 {
-    int i, j, m, n, k, kstep, frank, tn, ntrials;
+    int i, j, m, n, k, kstep, frank, tn, ntrials, culaVersion;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *Qk, *Rk, *P, *Porig, *QkRk, *QkRkPt, *Q, *B, *QB;
     vec *I, *col_vec;
@@ -18,12 +18,20 @@ int main()
     double elapsed_secsQR1, elapsed_secsQR2, elapsed_secsQB0, elapsed_secsQB1, elapsed_secsQB2, elapsed_secsQBb0, elapsed_secsQBb1, elapsed_secsQBb2;
     double elapsed_secsQR1_sum, elapsed_secsQR2_sum, elapsed_secsQB0_sum, elapsed_secsQB1_sum, elapsed_secsQB2_sum, elapsed_secsQBb0_sum, elapsed_secsQBb1_sum, elapsed_secsQBb2_sum;
     FILE *fp;
+    culaStatus status;
 
+    printf("Initializing CULA\n");
+    status = culaInitialize();
+    checkStatus(status);
+
+    culaVersion = culaGetVersion();
+    printf("culaVersion is %d\n", culaVersion);
+ 
 
     // set up vars - filename to record timings, number of trials, k and block size
     fp = fopen("timings/driver_multi_core_mkl2.txt","a");
     ntrials = 2;
-    k = 200;
+    k = 100;
     kstep = 20;
 
     // warm up MKL libs using full pivoted QR ----> 
@@ -45,7 +53,7 @@ int main()
 
     // run all algs for these nxn matrix sizes
     //for(n = 5000; n<=5000; n+=1000){
-    for(n = 300; n<=300; n+=100){
+    for(n = 2000; n<=2000; n+=1000){
 
         printf("======= n = %d =========\n", n);
         elapsed_secsQR1_sum = 0;
@@ -260,6 +268,10 @@ int main()
 
     fclose(fp);
 
-    return 0;
+    printf("Shutting down CULA\n");
+    culaShutdown();
+
+    return EXIT_SUCCESS;
+
 }
 

@@ -1,4 +1,4 @@
-/* Intel MKL code with OpenMP : 
+/* NVIDIA CULA code interfaced with Intel MKL code with OpenMP  
 test driver 3 for interpolative decomposition 
 and CUR non-randomized and randomized routines */
 
@@ -100,14 +100,13 @@ int main()
 
 
     // delete and exit
-    printf("delete and exit..\n");
+    //printf("delete and exit..\n");
     //matrix_delete(M); matrix_delete(T); matrix_delete(S);
     //vector_delete(Icol); vector_delete(Irow);
 
-    printf("Shutting down CULA\n");
-    culaShutdown();
-
-    return EXIT_SUCCESS;
+    //printf("Shutting down CULA\n");
+    //culaShutdown();
+    //return EXIT_SUCCESS;
 
 
     printf("\ncalling rank %d two sided ID routine..\n", k);
