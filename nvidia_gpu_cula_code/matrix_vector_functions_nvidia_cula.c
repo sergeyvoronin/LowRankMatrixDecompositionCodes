@@ -1,5 +1,4 @@
-/* high level matrix/vector functions using CULA for BLAS/LAPACK where possible 
-and Intel MKL for rest of the functions */
+/* high level matrix/vector functions using nvidia cula for blas */
 /* Sergey Voronin, 2014 - 2016 */
 
 #include "matrix_vector_functions_nvidia_cula.h"
@@ -1120,35 +1119,35 @@ void append_matrices_horizontally(mat *A, mat *B, mat *C){
 
 
 /* append matrices vertically: C = [A; B] */
-/*void append_matrices_vertically(mat *A, mat *B, mat *C){
-    int i,j;
-
-    #pragma omp parallel shared(C,A) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<A->nrows; i++){
-        for(j=0; j<A->ncols; j++){
-            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
-        }
-    }
-    }
-
-    #pragma omp parallel shared(C,B,A) private(i) 
-    {
-    #pragma omp for 
-    for(i=0; i<B->nrows; i++){
-        for(j=0; j<B->ncols; j++){
-            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
-        }
-    }
-    }
-}*/
-
-
-/* append matrices vertically: C = [A; B] */
 void append_matrices_vertically(mat *A, mat *B, mat *C){
     int i,j;
 
+    #pragma omp parallel shared(C,A) private(i,j) 
+    {
+    #pragma omp for 
+    for(i=0; i<A->nrows; i++){
+        for(j=0; j<A->ncols; j++){
+            matrix_set_element(C,i,j,matrix_get_element(A,i,j));
+        }
+    }
+    }
+
+    #pragma omp parallel shared(C,B,A) private(i,j) 
+    {
+    #pragma omp for 
+    for(i=0; i<B->nrows; i++){
+        for(j=0; j<B->ncols; j++){
+            matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
+        }
+    }
+    }
+}
+
+
+/* append matrices vertically: C = [A; B] */
+/*void append_matrices_vertically(mat *A, mat *B, mat *C){
+    int i,j;
+
     for(i=0; i<A->nrows; i++){
         for(j=0; j<A->ncols; j++){
             matrix_set_element(C,i,j,matrix_get_element(A,i,j));
@@ -1160,7 +1159,7 @@ void append_matrices_vertically(mat *A, mat *B, mat *C){
             matrix_set_element(C,A->nrows+i,j,matrix_get_element(B,i,j));
         }
     }
-}
+}*/
 
 
 
