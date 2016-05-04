@@ -285,8 +285,14 @@ void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k);
 /* M = M(:,1:k); */
 void resize_matrix_by_columns(mat **M, int k);
 
+/* M = M(:,(end-k+1):end); */
+void resize_matrix_by_columns_from_end(mat **M, int k);
+
 /* M = M(1:k,:); */
 void resize_matrix_by_rows(mat **M, int k);
+
+/* M = M((end-k+1):end,:); */
+void resize_matrix_by_rows_from_end(mat **M, int k);
 
 
 //void fill_matrix_from_column_list(mat *M, vec *I, mat *M_k);
