@@ -1,5 +1,18 @@
 #include "matrix_vector_functions_nvidia_cula.h"
 
+/* computes the low rank SVD of rank k or tolerance TOL of matrix M  */
+void low_rank_svd_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, mat **U, mat **S, mat **V);
+
+
+/* computes the approximate low rank SVD of rank k or tolerance TOL of matrix M  */
+void low_rank_svd_rand_decomp_fixed_rank(mat *M, int k, int p, int vnum, int q, int s, int *frank, mat **U, mat **S, mat **V);
+
+
+/* computes the approximate low rank SVD of rank k or tolerance TOL of matrix M using 
+a blocked randomized scheme */
+void low_rank_svd_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, int vnum, 
+int kstep, int q, int s, int *frank, mat **U, mat **S, mat **V);
+
 
 /* computes the approximate low rank SVD of rank k of matrix M using BBt version */
 void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V);

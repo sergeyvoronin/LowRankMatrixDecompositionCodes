@@ -4,6 +4,387 @@
 #include "rank_revealing_algorithms_nvidia_cula.h"
 
 
+/* computes the low rank SVD of rank k or tolerance TOL of matrix M  */
+void low_rank_svd_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, mat **U, mat **S, mat **V){
+    int i,m,n,r,rankMode,tolMode;
+    double sval;
+    mat *Mc, *Uf, *Sf, *Vtf, *Vf;
+
+    // get dims
+    m = M->nrows;
+    n = M->ncols; 
+    r = min(m,n);
+
+    // set up mats
+    Mc = matrix_new(m,n);
+    Uf = matrix_new(m,r);
+    Sf = matrix_new(r,r);
+    Vtf = matrix_new(r,n);
+    Vf = matrix_new(n,r);
+
+    // determine mode
+    if(k <= 0){
+        rankMode = 0;
+        tolMode = 1;
+        k = min(m,n);
+    } else {
+        rankMode = 1;
+        tolMode = 0;
+    }
+
+    // copy matrix
+    matrix_copy(Mc,M);
+
+    // call SVD
+    singular_value_decomposition(Mc, Uf, Sf, Vtf);
+    matrix_delete(Mc);
+    matrix_build_transpose(Vf, Vtf);
+    //use_low_rank_svd_for_approximation(M, Uf, Sf, Vf);
+
+
+    // set frank to k or to |\sigma_{k+1}| < TOL
+    *frank = k;
+    if(tolMode){
+        for(i = 0; i<Sf->nrows; i++){
+            sval = matrix_get_element(Sf,i,i);
+            if(abs(sval) < TOL && i<(Sf->nrows-1)){
+                *frank = i+1;
+                break;
+            }
+        }
+    }
+
+    // setup mats
+    *U = matrix_new(m,*frank);
+    *S = matrix_new(*frank,*frank);
+    *V = matrix_new(n,*frank);
+
+    // extract components
+    // TODO: enable openmp in these
+    fill_matrix_from_first_columns(Uf, *frank, *U);
+    fill_matrix_from_first_columns(Vf, *frank, *V);
+    fill_matrix_from_first_columns(Sf, *frank, *S);
+    fill_matrix_from_first_rows(Sf, *frank, *S);
+
+    matrix_delete(Uf); matrix_delete(Sf); matrix_delete(Vf);
+}
+
+
+/* computes the approximate low rank SVD of rank k or tolerance TOL of matrix M  */
+void low_rank_svd_rand_decomp_fixed_rank(mat *M, int k, int p, int vnum, int q, int s, int *frank, mat **U, mat **S, mat **V){
+    int i,j,m,n,r,l;
+    mat *RN, *Y, *Z, *Q, *Yorth, *Zorth;
+    mat *Bt, *Qhat, *Rhat, *Uhat, *Vhat_trans;
+    
+    // get dims
+    m = M->nrows;
+    n = M->ncols; 
+    r = min(m,n);
+
+    // setup mats
+    l = k + p;
+    *U = matrix_new(m,l);
+    *S = matrix_new(l,l);
+    *V = matrix_new(n,l);
+
+    // build random matrix
+    RN = matrix_new(n, l);
+    initialize_random_matrix(RN);
+
+    // multiply to get matrix of random samples Y
+    Y = matrix_new(m, l);
+    matrix_matrix_mult(M, RN, Y);
+
+    // now build up (M M^T)^q R
+    Z = matrix_new(n,l);
+    Yorth = matrix_new(m,l);
+    Zorth = matrix_new(n,l);
+    for(j=1; j<q; j++){
+        printf("M M^T mult j=%d of %d\n", j, q-1);
+
+        if((2*j-2) % s == 0){
+            //printf("orthogonalize Y..\n");
+            QR_factorization_getQ(Y, Yorth);
+            //printf("Z = M'*Yorth..\n");
+            matrix_transpose_matrix_mult(M,Yorth,Z);
+        }
+        else{
+            //printf("Z = M'*Y..\n");
+            matrix_transpose_matrix_mult(M,Y,Z);
+        }
+
+        
+        if((2*j-1) % s == 0){
+            //printf("orthogonalize Z..\n");
+            QR_factorization_getQ(Z, Zorth);
+            //printf("Y = M*Zorth..\n");
+            matrix_matrix_mult(M,Zorth,Y);
+        }
+        else{
+            //printf("Y = M*Z..\n");
+            matrix_matrix_mult(M,Z,Y);
+        }
+    }
+
+    // orthogonalize on exit from loop to get Q
+    Q = matrix_new(m,l);
+    QR_factorization_getQ(Y, Q);
+
+    // either QR of B^T method, or eigendecompose BB^T method
+    if(vnum == 1 || vnum > 2){
+        printf("using QR of B^T method\n");
+        
+        // form Bt = Mt*Q : nxm * mxl = nxl
+        //printf("form Bt..\n");
+        Bt = matrix_new(n,l);
+        matrix_transpose_matrix_mult(M,Q,Bt);
+
+        // compute QR factorization of Bt    
+        //M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
+        //printf("doing QR..\n");
+        Qhat = matrix_new(n,l);
+        Rhat = matrix_new(l,l);   
+        compact_QR_factorization(Bt,Qhat,Rhat);
+
+        // compute SVD of Rhat (lxl)
+        //printf("doing SVD..\n");
+        Uhat = matrix_new(l,l);
+        Vhat_trans = matrix_new(l,l);
+        singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
+
+        // U = Q*Vhat_trans
+        //printf("form U..\n");
+        matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
+
+        // V = Qhat*Uhat
+        //printf("form V..\n");
+        matrix_matrix_mult(Qhat,Uhat,*V);
+
+        // clean up
+        matrix_delete(Rhat);
+        matrix_delete(Qhat);
+        matrix_delete(Uhat);
+        matrix_delete(Vhat_trans);
+        matrix_delete(Bt);
+
+        // resize matrices to rank k from beginning
+        //printf("resize mats\n");
+        resize_matrix_by_columns(U,k);
+        resize_matrix_by_columns(V,k);
+        resize_matrix_by_columns(S,k);
+        resize_matrix_by_rows(S,k);
+    } else {
+        printf("using eigendecomposition of B B^T method\n");
+        // build the matrix B B^T = Q^T M M^T Q column by column 
+        // Bt = M^T Q ; nxm * mxk = nxk
+        printf("form BBt..\n");
+        mat *B = matrix_new(l,n);
+        matrix_transpose_matrix_mult(Q,M,B);
+
+        mat *BBt = matrix_new(l,l);
+        matrix_matrix_transpose_mult(B,B,BBt);    
+
+        // compute eigendecomposition of BBt
+        printf("eigendecompose BBt..\n");
+        vec *evals = vector_new(l);
+        mat *Uhat = matrix_new(l,l);
+        matrix_copy_symmetric(Uhat,BBt);
+        compute_evals_and_evecs_of_symm_matrix(Uhat, evals);
+
+
+        // compute singular values and matrix Sigma
+        printf("form S..\n");
+        vec *singvals = vector_new(l);
+        for(i=0; i<l; i++){
+            vector_set_element(singvals,i,sqrt(vector_get_element(evals,i)));
+        }
+        initialize_diagonal_matrix(*S, singvals);
+        
+        // compute U = Q*Uhat mxk * kxk = mxk  
+        printf("form U..\n");
+        matrix_matrix_mult(Q,Uhat,*U);
+
+        // compute nxk V 
+        // V = B^T Uhat * Sigma^{-1}
+        printf("form V..\n");
+        mat *Sinv = matrix_new(l,l);
+        mat *UhatSinv = matrix_new(l,l);
+        invert_diagonal_matrix(Sinv,*S);
+        matrix_matrix_mult(Uhat,Sinv,UhatSinv);
+        matrix_transpose_matrix_mult(B,UhatSinv,*V);
+
+        matrix_delete(BBt);
+        matrix_delete(Sinv);
+        matrix_delete(UhatSinv);
+
+        // resize matrices to rank k from end
+        printf("resize mats to rank %d from end\n",k);
+        resize_matrix_by_columns_from_end(U,k);
+        resize_matrix_by_columns_from_end(V,k);
+        resize_matrix_by_columns_from_end(S,k);
+        resize_matrix_by_rows_from_end(S,k);
+    }
+
+    //printf("free stuff\n");
+    matrix_delete(RN);
+    matrix_delete(Y);
+    matrix_delete(Q);
+    matrix_delete(Z);
+    matrix_delete(Yorth);
+    matrix_delete(Zorth);
+}
+
+
+/* computes the approximate low rank SVD of rank k or tolerance TOL of matrix M using 
+a blocked randomized scheme */
+void low_rank_svd_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, 
+int vnum, int kstep, int q, int s, int *frank, mat **U, mat **S, mat **V){
+    int i,j,m,n,l,nstep;
+    double val;
+    m = M->nrows; n = M->ncols;
+    mat *Q, *B, *BBt;
+    mat *Bt, *Qhat, *Rhat, *Uhat, *Vhat_trans;
+
+    int rankMode,tolMode;
+    double elapsed_secs;
+    struct timeval start_timeval, end_timeval;
+
+    if(k<=0){
+        rankMode = 0; tolMode = 1;
+        nstep = 0;
+    } else {
+        rankMode = 1; tolMode = 0;
+    }
+
+    // take p at least kstep size
+    m = M->nrows; n = M->ncols;
+    if(p < kstep && (p+kstep) < min(m,n)){
+        p = kstep;
+    }
+    nstep = ceil((k+p)/kstep);
+    
+    gettimeofday(&start_timeval, NULL);
+    randQB_pb_new(M, kstep, nstep, TOL, q, s, frank, &Q, &B);
+    gettimeofday(&end_timeval, NULL);
+    elapsed_secs = get_seconds_frac(start_timeval,end_timeval);
+    printf("elapsed time for randQB_pb_new is: %f\n", elapsed_secs);
+ 
+    // rank mode; then get rank k decomposition
+    // TOL mode; then use fraction of B size for oversampling 
+    l = B->nrows;
+    if(rankMode == 1){
+        *frank = k;
+    } else {
+        //*frank = round(0.95*(*frank));
+        *frank = round((double)(*frank/(*frank + p + 1e-6))*(*frank));
+    }
+    
+    // setup mats
+    k = *frank;
+    *U = matrix_new(m,l);
+    *S = matrix_new(l,l);
+    *V = matrix_new(n,l);
+
+
+    // either QR of B^T method, or eigendecompose BB^T method
+    if(vnum == 1 || vnum > 2){
+        printf("using QR of B^T method\n");
+        
+        // form Bt = Mt*Q : nxm * mxl = nxl
+        //printf("form Bt..\n");
+        Bt = matrix_new(n,l);
+        matrix_transpose_matrix_mult(M,Q,Bt);
+
+        // compute QR factorization of Bt    
+        //M is mxn ; Q is mxn ; R is min(m,n) x min(m,n) */ 
+        //printf("doing QR..\n");
+        Qhat = matrix_new(n,l);
+        Rhat = matrix_new(l,l);   
+        compact_QR_factorization(Bt,Qhat,Rhat);
+
+        // compute SVD of Rhat (lxl)
+        //printf("doing SVD..\n");
+        Uhat = matrix_new(l,l);
+        Vhat_trans = matrix_new(l,l);
+        singular_value_decomposition(Rhat, Uhat, *S, Vhat_trans);
+
+        // U = Q*Vhat_trans
+        //printf("form U..\n");
+        matrix_matrix_transpose_mult(Q,Vhat_trans,*U);
+
+        // V = Qhat*Uhat
+        //printf("form V..\n");
+        matrix_matrix_mult(Qhat,Uhat,*V);
+
+        // clean up
+        matrix_delete(Rhat);
+        matrix_delete(Qhat);
+        matrix_delete(Uhat);
+        matrix_delete(Vhat_trans);
+        matrix_delete(Bt);
+
+        // resize matrices to rank k
+        resize_matrix_by_columns(U,k);
+        resize_matrix_by_columns(V,k);
+        resize_matrix_by_columns(S,k);
+        resize_matrix_by_rows(S,k);
+    } else {
+        printf("using eigendecomposition of B B^T method\n");
+        // build the matrix B B^T = Q^T M M^T Q column by column 
+        // Bt = M^T Q ; nxm * mxk = nxk
+        printf("form BBt..\n");
+        mat *B = matrix_new(l,n);
+        matrix_transpose_matrix_mult(Q,M,B);
+
+        mat *BBt = matrix_new(l,l);
+        matrix_matrix_transpose_mult(B,B,BBt);    
+
+        // compute eigendecomposition of BBt
+        printf("eigendecompose BBt..\n");
+        vec *evals = vector_new(l);
+        mat *Uhat = matrix_new(l,l);
+        matrix_copy_symmetric(Uhat,BBt);
+        compute_evals_and_evecs_of_symm_matrix(Uhat, evals);
+
+
+        // compute singular values and matrix Sigma
+        printf("form S..\n");
+        vec *singvals = vector_new(l);
+        for(i=0; i<l; i++){
+            vector_set_element(singvals,i,sqrt(vector_get_element(evals,i)));
+        }
+        initialize_diagonal_matrix(*S, singvals);
+        
+        // compute U = Q*Uhat mxk * kxk = mxk  
+        printf("form U..\n");
+        matrix_matrix_mult(Q,Uhat,*U);
+
+        // compute nxk V 
+        // V = B^T Uhat * Sigma^{-1}
+        printf("form V..\n");
+        mat *Sinv = matrix_new(l,l);
+        mat *UhatSinv = matrix_new(l,l);
+        invert_diagonal_matrix(Sinv,*S);
+        matrix_matrix_mult(Uhat,Sinv,UhatSinv);
+        matrix_transpose_matrix_mult(B,UhatSinv,*V);
+
+        matrix_delete(BBt);
+        matrix_delete(Sinv);
+        matrix_delete(UhatSinv);
+
+        // resize matrices to rank k from end
+        printf("resize mats to rank %d from end\n",k);
+        resize_matrix_by_columns_from_end(U,k);
+        resize_matrix_by_columns_from_end(V,k);
+        resize_matrix_by_columns_from_end(S,k);
+        resize_matrix_by_rows_from_end(S,k);
+    }
+}
+
+
+
+
+
 /* computes the approximate low rank SVD of rank k of matrix M using BBt version */
 void randomized_low_rank_svd1(mat *M, int k, mat **U, mat **S, mat **V){
     int i,j,m,n;
@@ -1454,7 +1835,8 @@ void id_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, vec **I
     Rk1 = matrix_new(*frank,*frank);
     Rk2 = matrix_new(*frank,n-*frank);
     fill_matrix_from_first_columns(Rk, *frank, Rk1);
-    fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    //fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, *frank, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
@@ -1475,7 +1857,7 @@ l is oversampling parameter (e.g. l = 20), p is power sampling parameter (e.g. p
 and s controls how many orthogonalizations are done in between mults in power 
 sampling scheme (e.g. p = 1) */
 void id_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, vec **I, mat **T){
-    int i,j,frankQR,ind,m,n;
+    int i,j,ind,m,n;
     mat *RN, *Y, *Yt, *Yt_orth, *Z, *Qk, *Rk, *Qd, *Rd, *Rk1, *Rk2;
     m = M->nrows;
     n = M->ncols;
@@ -1557,11 +1939,11 @@ void id_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, vec **I, mat 
     fill_matrix_from_first_columns(Qd, k, Qk);
     fill_matrix_from_first_rows(Rd, k, Rk);
     
-    frankQR = k;
-    Rk1 = matrix_new(frankQR,frankQR);
-    Rk2 = matrix_new(frankQR,n-frankQR);
-    fill_matrix_from_first_columns(Rk, frankQR, Rk1);
-    fill_matrix_from_last_columns(Rk, frankQR, Rk2);
+    Rk1 = matrix_new(k,k);
+    Rk2 = matrix_new(k,n-k);
+    fill_matrix_from_first_columns(Rk, k, Rk1);
+    //fill_matrix_from_last_columns(Rk, k, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, k, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
@@ -1611,8 +1993,8 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     n = B->ncols;
     pivotedQR_mkl(B, &Qk, &Rk, I);
 
-    printf("norm(Qk,fro) = %f\n", get_matrix_frobenius_norm(Qk));
-    printf("norm(Rk,fro) = %f\n", get_matrix_frobenius_norm(Qk));
+    //printf("norm(Qk,fro) = %f\n", get_matrix_frobenius_norm(Qk));
+    //printf("norm(Rk,fro) = %f\n", get_matrix_frobenius_norm(Qk));
 
     // rank mode; then get rank k decomposition
     // TOL mode; then use fraction of B size for oversampling 
@@ -1627,7 +2009,8 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     Rk1 = matrix_new(*frank,*frank);
     Rk2 = matrix_new(*frank,n-*frank);
     fill_matrix_from_first_columns(Rk, *frank, Rk1);
-    fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    //fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, *frank, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
@@ -1638,7 +2021,7 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     gettimeofday(&end_timeval, NULL);
     elapsed_secs = get_seconds_frac(start_timeval,end_timeval);
     //printf("elapsed time for solving for T is: %f\n", elapsed_secs);
-    printf("norm(T,fro) =  %f\n", get_matrix_frobenius_norm(*T));
+    //printf("norm(T,fro) =  %f\n", get_matrix_frobenius_norm(*T));
  
     matrix_delete(Rk1);
     matrix_delete(Rk2);

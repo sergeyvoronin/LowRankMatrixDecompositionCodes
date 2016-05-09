@@ -1,4 +1,5 @@
-/* high level matrix/vector functions using nvidia cula for blas */
+/* high level matrix/vector functions using nvidia cula for blas/lapack 
+where possible and intel mkl in select functions */
 /* Sergey Voronin, 2014 - 2016 */
 
 #include "matrix_vector_functions_nvidia_cula.h"
@@ -925,6 +926,8 @@ void matrix_copy_all_rows_and_last_columns_from_indexk(mat *M_out, mat *M, int k
 }
 
 
+
+/* M_k = M(1:k,:) */
 void fill_matrix_from_first_rows(mat *M, int k, mat *M_k){
     int i;
     vec *row_vec;
@@ -941,17 +944,19 @@ void fill_matrix_from_first_rows(mat *M, int k, mat *M_k){
 }
 
 
-/* M_k = M(:,(k+1):end) */
+/* M_k = M((end-k):end,:) */
 void fill_matrix_from_last_rows(mat *M, int k, mat *M_k){
-    int i,ind;
+    int i;
     vec *row_vec;
-    ind = 0;
-    for(i=k; i<M->nrows; i++){
+    #pragma omp parallel shared(M,M_k,k) private(i,row_vec) 
+    {
+    #pragma omp for
+    for(i=0; i<k; i++){
         row_vec = vector_new(M->nrows);
-        matrix_get_row(M,i,row_vec);
-        matrix_set_row(M_k,ind,row_vec);
+        matrix_get_row(M,M->nrows - k +i,row_vec);
+        matrix_set_row(M_k,i,row_vec);
         vector_delete(row_vec);
-        ind++;
+    }
     }
 }
 
@@ -972,17 +977,34 @@ void fill_matrix_from_first_columns(mat *M, int k, mat *M_k){
 }
 
 
-/* M_k = M(:,(k+1):end) */
+/* M_k = M(:,(end-k:end) */
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k){
     int i;
     vec *col_vec;
     #pragma omp parallel shared(M,M_k,k) private(i,col_vec) 
     {
     #pragma omp for
-    for(i=0; i<(M->ncols - k); i++){
+    for(i=0; i<k; i++){
         col_vec = vector_new(M->nrows);
-        matrix_get_col(M,i+k,col_vec);
+        matrix_get_col(M,M->ncols - k +i,col_vec);
         matrix_set_col(M_k,i,col_vec);
+        vector_delete(col_vec);
+    }
+    }
+}
+
+
+/* M_k = M(:,k:end) */
+void fill_matrix_from_last_columns_from_specified_one(mat *M, int k, mat *M_k){
+    int i;
+    vec *col_vec;
+    #pragma omp parallel shared(M,M_k,k) private(i,col_vec) 
+    {
+    #pragma omp for
+    for(i=k; i<(M->ncols); i++){
+        col_vec = vector_new(M->nrows);
+        matrix_get_col(M,i,col_vec);
+        matrix_set_col(M_k,i-k,col_vec);
         vector_delete(col_vec);
     }
     }
@@ -1069,6 +1091,20 @@ void resize_matrix_by_columns(mat **M, int k){
 }  
 
 
+/* M = M(:,(end-k+1):end); */
+void resize_matrix_by_columns_from_end(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new((*M)->nrows, k);
+    fill_matrix_from_last_columns(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
+}  
+
+
+
 /* M = M(1:k,:); */
 void resize_matrix_by_rows(mat **M, int k){
     int j;
@@ -1080,6 +1116,21 @@ void resize_matrix_by_rows(mat **M, int k){
     matrix_copy(*M,R);
     matrix_delete(R);
 }
+
+
+/* M = M((end-k+1):end,:); */
+void resize_matrix_by_rows_from_end(mat **M, int k){
+    int j;
+    mat *R;
+    R = matrix_new(k, (*M)->ncols);
+    fill_matrix_from_last_rows(*M, k, R);
+    matrix_delete(*M);
+    *M = matrix_new(R->nrows, R->ncols);
+    matrix_copy(*M,R);
+    matrix_delete(R);
+}
+
+
 
 
 /* append matrices side by side: C = [A, B] */
