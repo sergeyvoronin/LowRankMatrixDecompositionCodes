@@ -260,13 +260,14 @@ void matrix_copy_all_rows_and_last_columns_from_indexk(mat *M_out, mat *M, int k
 
 void fill_matrix_from_first_rows(mat *M, int k, mat *M_k);
 
-/* M_k = M(:,(k+1):end) */
 void fill_matrix_from_last_rows(mat *M, int k, mat *M_k);
 
 
 void fill_matrix_from_first_columns(mat *M, int k, mat *M_k);
 
 void fill_matrix_from_last_columns(mat *M, int k, mat *M_k);
+
+void fill_matrix_from_last_columns_from_specified_one(mat *M, int k, mat *M_k);
 
 
 void fill_matrix_from_lower_right_corner(mat *M, int k, mat *M_out);
@@ -285,13 +286,13 @@ void fill_matrix_from_last_columns_from_list(mat *M, vec *I, int k, mat *M_k);
 /* M = M(:,1:k); */
 void resize_matrix_by_columns(mat **M, int k);
 
-/* M = M(:,(end-k+1):end); */
+/* M = M(:,(end-k):end); */
 void resize_matrix_by_columns_from_end(mat **M, int k);
 
 /* M = M(1:k,:); */
 void resize_matrix_by_rows(mat **M, int k);
 
-/* M = M((end-k+1):end,:); */
+/* M = M((end-k):end,:); */
 void resize_matrix_by_rows_from_end(mat **M, int k);
 
 

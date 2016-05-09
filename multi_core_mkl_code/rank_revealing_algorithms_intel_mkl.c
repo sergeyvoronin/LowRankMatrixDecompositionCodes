@@ -1837,7 +1837,8 @@ void id_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *frank, vec **I
     Rk1 = matrix_new(*frank,*frank);
     Rk2 = matrix_new(*frank,n-*frank);
     fill_matrix_from_first_columns(Rk, *frank, Rk1);
-    fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    //fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, *frank, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
@@ -1858,7 +1859,7 @@ l is oversampling parameter (e.g. l = 20), p is power sampling parameter (e.g. p
 and s controls how many orthogonalizations are done in between mults in power 
 sampling scheme (e.g. p = 1) */
 void id_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, vec **I, mat **T){
-    int i,j,frankQR,ind,m,n;
+    int i,j,ind,m,n;
     mat *RN, *Y, *Yt, *Yt_orth, *Z, *Qk, *Rk, *Qd, *Rd, *Rk1, *Rk2;
     m = M->nrows;
     n = M->ncols;
@@ -1934,17 +1935,16 @@ void id_rand_decomp_fixed_rank(mat *M, int k, int p, int q, int s, vec **I, mat 
     */
     pivotedQR_mkl(Y, &Qd, &Rd, I);
     
-
     Qk = matrix_new(Qd->nrows,k);   
     Rk = matrix_new(k,Rd->ncols);   
     fill_matrix_from_first_columns(Qd, k, Qk);
     fill_matrix_from_first_rows(Rd, k, Rk);
-    
-    frankQR = k;
-    Rk1 = matrix_new(frankQR,frankQR);
-    Rk2 = matrix_new(frankQR,n-frankQR);
-    fill_matrix_from_first_columns(Rk, frankQR, Rk1);
-    fill_matrix_from_last_columns(Rk, frankQR, Rk2);
+
+    Rk1 = matrix_new(k,k);
+    Rk2 = matrix_new(k,n-k);
+    fill_matrix_from_first_columns(Rk, k, Rk1);
+    //fill_matrix_from_last_columns(Rk, k, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, k, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
@@ -2007,7 +2007,8 @@ void id_blockrand_decomp_fixed_rank_or_prec(mat *M, int k, int p, double TOL, in
     Rk1 = matrix_new(*frank,*frank);
     Rk2 = matrix_new(*frank,n-*frank);
     fill_matrix_from_first_columns(Rk, *frank, Rk1);
-    fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    //fill_matrix_from_last_columns(Rk, *frank, Rk2);
+    fill_matrix_from_last_columns_from_specified_one(Rk, *frank, Rk2);
 
     *T = matrix_new(Rk2->nrows,Rk2->ncols);
 
