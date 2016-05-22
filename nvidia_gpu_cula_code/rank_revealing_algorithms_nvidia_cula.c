@@ -958,7 +958,7 @@ void pivotedQR_mkl(mat *M, mat **Q, mat **R, vec **I){
     }
 
     // get Q
-    LAPACKE_dorgqr(CblasColMajor, Mwork->nrows, Mwork->nrows, min(Mwork->nrows,Mwork->ncols), Mwork->d, Mwork->nrows, tau_arr);
+    LAPACKE_dorgqr(CblasColMajor, Qrows, Qcols, k, Mwork->d, m, tau_arr);
 
     *Q = matrix_new(Qrows,Qcols);
     for(i=0; i<Qrows; i++){
