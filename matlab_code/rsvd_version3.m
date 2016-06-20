@@ -1,39 +1,33 @@
-% QR of B^T version with sampling of (A A^T)^q A R matrix with orthogonalization 
-% control parameter s (s=1 most paranoid, s>1 less paranoid). 
-function [U,Sigma,V] = rsvd_version3(A,k,q,s)
+% randomized low rank SVD via QB algorithm 
+function [U,Sigma,V] = rsvd_version3(A,k,kstep,q,s)
     m = size(A,1);
     n = size(A,2);
+    nstep = round(k/kstep) + 1;
+    kval = kstep*nstep;
 
-    R = randn(n,k);
-    Y = A*R; % m \times n * n \times k = m \times k
+    while kval > min(m,n)
+        kstep = kstep - 1;
+        kval = kstep*nstep;
+    end
 
-    for j=1:q
-        if mod(2*j-2,s) == 0
-            [Y,~] = qr(Y,0);
-        end
-        Z = A'*Y;
+    [Q,B] = randpbQB(A,q,s,kstep,nstep);
 
-        if mod(2*j-1,s) == 0
-            [Z,~] = qr(Z,0);
-        end
-        Y = A*Z;
-    end    
-    [Q,~] = qr(Y,0);
+    BBt = B*B';
+    BBt=0.5*(BBt+BBt'); % make sure it's symmetric
+    [Uhat,D] = eig(BBt);
 
+    Sigma = sqrt(D);
+    U = Q*Uhat;
 
-    %B = Q'*A; % k \times m * m \times n = k \times n
-    %Bt = B'; % n \times k
-    Bt = A'*Q;
+    V = zeros(n,kval);
+    for j=1:kval
+        v_j = 1/Sigma(j,j) * (B' * Uhat(:,j));
+        V(:,j) = v_j;
+    end
 
-    [Qhat,Rhat] = qr(Bt,0);
-
-    % Rhat is k \times k
-    whos Qhat Rhat
-
-    [Uhat,Sigmahat,Vhat] = svd(Rhat);
-
-    U = Q*Vhat;
-    Sigma = Sigmahat;
-    V = Qhat*Uhat;
+    % take last k vectors and values, due to eig routine value ordering
+    U = U(:,(end-k+1):end);
+    Sigma = Sigma((end-k+1):end,(end-k+1):end);
+    V = V(:,(end-k+1):end);
 end
 

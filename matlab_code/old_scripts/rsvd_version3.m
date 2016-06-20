@@ -1,10 +1,10 @@
-% randomized low rank SVD using QR of B^T version 
-function [U,Sigma,V] = rsvd_version2(A,k,p,q,s)
+% QR of B^T version with sampling of (A A^T)^q A R matrix with orthogonalization 
+% control parameter s (s=1 most paranoid, s>1 less paranoid). 
+function [U,Sigma,V] = rsvd_version3(A,k,q,s)
     m = size(A,1);
     n = size(A,2);
-    l = k + p;
 
-    R = randn(n,l);
+    R = randn(n,k);
     Y = A*R; % m \times n * n \times k = m \times k
 
     for j=1:q
@@ -21,13 +21,13 @@ function [U,Sigma,V] = rsvd_version2(A,k,p,q,s)
     [Q,~] = qr(Y,0);
 
 
-    %B = Q'*A; % l \times m * m \times n = l \times n
-    %Bt = B'; % n \times l
+    %B = Q'*A; % k \times m * m \times n = k \times n
+    %Bt = B'; % n \times k
     Bt = A'*Q;
 
     [Qhat,Rhat] = qr(Bt,0);
 
-    % Rhat is l \times l
+    % Rhat is k \times k
     whos Qhat Rhat
 
     [Uhat,Sigmahat,Vhat] = svd(Rhat);
@@ -35,10 +35,5 @@ function [U,Sigma,V] = rsvd_version2(A,k,p,q,s)
     U = Q*Vhat;
     Sigma = Sigmahat;
     V = Qhat*Uhat;
-    
-    % take first k components
-    U = U(:,1:k);
-    Sigma = Sigma(1:k,1:k);
-    V = V(:,1:k);
 end
 

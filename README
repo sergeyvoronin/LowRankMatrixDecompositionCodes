@@ -80,26 +80,39 @@ sets the rank k <= min(nrows,ncols)
 or the tolerance parameter if one of the autorank methods is used.
 Additional parameters such as the block size apply to the block randomized methods.
 
-One can call either algorithm I,II,III, or IV for computing the low rank SVD with 
-each driver.
-Each of the codes also has three autorank functions based on version II and III 
-of the randomized algorithm, for use when a good rank k to use is not known in advance.
-Thus, there is a total of 6 functions for computing the low rank SVD. Algorithm IV 
-is block based and uses the QB algorithm to construct Q instead of QR.
+The following functions are provided for SVD, single and double sided ID, and CUR decompositons:
 
-Additionally, for the multi-core and GPU architectures the following algorithms 
-are also available:
-full column pivoted QR from lapack (only for multi-core), 
-partial column pivoted QR (using householder reflectors), 
-single vector randQB with power method, and 
-blocked randQB with power method.
+// low rank SVD
+low_rank_svd_decomp_fixed_rank_or_prec(mat A, int k, double TOL,
+  int *frank, mat **U, mat **S, mat **V);
+low_rank_svd_rand_decomp_fixed_rank(mat *A, int k, int p, int vnum,
+  int q, int s, mat **U, mat **S, mat **V);
+low_rank_svd_blockrand_decomp_fixed_rank_or_prec(mat *A, int k, int p, double TOL,
+  int vnum, int kstep, int q, int s, int *frank, mat **U, mat **S, mat **V);
 
-For the multi-core architecture, the following routines are also 
-available: ID, double sided ID, CUR in full, randomized, and 
-block randomized form.
+// one sided ID
+id_decomp_fixed_rank_or_prec(mat *A, int k, double TOL, int *frank, vec **I, mat **T);
+id_rand_decomp_fixed_rank(mat *A, int k, int p, int q, int s, vec **I, mat **T);
+id_blockrand_decomp_fixed_rank_or_prec(mat *A, int k, int p, double TOL,
+  int kstep, int q, int s, int *frank, vec **I, mat **T);
 
-Sample calling procedure for the rsvd algorithms is as follows 
-(similar for all 3 architectures).
+// two sided ID
+id_two_sided_decomp_fixed_rank_or_prec(mat *A, int k, double TOL,
+  int *frank, vec **Icol, vec **Irow, mat **T, mat **S);
+id_two_sided_rand_decomp_fixed_rank(mat *A, int k, int p, int q, int s,
+  vec **Icol, vec **Irow, mat **T, mat **S);
+id_two_sided_blockrand_decomp_fixed_rank_or_prec(mat *A, int k, int p, double TOL,
+  int kstep, int q, int s, int *frank, vec **Icol, vec **Irow, mat **T, mat **S);
+
+// CUR 
+cur_decomp_fixed_rank_or_prec(mat *A, int k, double TOL,
+  int *frank, mat **C, mat **U, mat **R);
+cur_rand_decomp_fixed_rank(mat *A, int k, int p, int q, int s,
+  mat **C, mat **U, mat **R);
+cur_blockrand_decomp_fixed_rank_or_prec(mat *A, int k, int p, double TOL,
+  int kstep, int q, int s, int *frank, mat **C, mat **U, mat **R);
+
+
 
 =======================
 
@@ -120,7 +133,11 @@ p = 20;
 q = 2;
 s = 1;
 
-// call random SVD (use one of the six variants)
+// call random SVD (via the new functions or the older variants)
+low_rank_svd_rand_decomp_fixed_rank(M, k, p, vnum, q, s, &U, &S, &V);
+low_rank_svd_blockrand_decomp_fixed_rank_or_prec(M, k, p, TOL,
+  vnum, kstep, q, s, &frank, &U, &S, &V);
+
 randomized_low_rank_svd1(M, k, &U, &S, &V);
 randomized_low_rank_svd2(M, k, &U, &S, &V);
 randomized_low_rank_svd3(M, k, q, s, &U, &S, &V);

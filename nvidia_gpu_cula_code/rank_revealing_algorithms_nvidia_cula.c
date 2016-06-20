@@ -1793,6 +1793,7 @@ void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int q, int s, int *
 
     // clean up
     matrix_delete(A);
+    matrix_delete(RN); 
     matrix_delete(RNp); 
     matrix_delete(Yp);
     matrix_delete(Qp);
@@ -1800,6 +1801,7 @@ void randQB_pb_new(mat *M, int kstep, int nstep, double TOL, int q, int s, int *
     matrix_delete(QpBp);
     matrix_delete(AtQp);
     matrix_delete(AtQp2);
+    matrix_delete(QptA);
 }
 
 
