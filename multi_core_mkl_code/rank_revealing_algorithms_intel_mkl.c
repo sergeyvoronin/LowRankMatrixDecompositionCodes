@@ -69,7 +69,7 @@ void low_rank_svd_decomp_fixed_rank_or_prec(mat *M, int k, double TOL, int *fran
 }
 
 
-/* computes the approximate low rank SVD of rank k or tolerance TOL of matrix M  */
+/* computes the approximate low rank SVD of rank k of matrix M  */
 void low_rank_svd_rand_decomp_fixed_rank(mat *M, int k, int p, int vnum, int q, int s, int *frank, mat **U, mat **S, mat **V){
     int i,j,m,n,r,l;
     mat *RN, *Y, *Z, *Q, *Yorth, *Zorth;

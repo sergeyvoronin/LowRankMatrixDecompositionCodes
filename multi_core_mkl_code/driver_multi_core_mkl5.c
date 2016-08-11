@@ -14,7 +14,7 @@ int main(){
 
 
     //  load matrix    
-    char *M_file = "../data/A_mat_2kx4k.bin"; // matrix filename
+    char *M_file = "../../matrix_data/A_mat_6kx12k.bin"; // matrix filename
     
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);

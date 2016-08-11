@@ -8,4 +8,4 @@ nvcc driver_gpu_nvidia_cula2.c rank_revealing_algorithms_nvidia_cula.c matrix_ve
 
 nvcc driver_gpu_nvidia_cula3.c rank_revealing_algorithms_nvidia_cula.c matrix_vector_functions_nvidia_cula.c -o driver_gpu_nvidia_cula3 -Xcompiler -fopenmp -lmkl_rt -lcula_lapack -lcublas -lcudart -liomp5 -L$CULA_LIB_PATH_64 -I$CULA_INC_PATH
 
-nvcc driver_gpu_nvidia_cula4.c rank_revealing_algorithms_nvidia_cula.c matrix_vector_functions_nvidia_cula.c -o driver_gpu_nvidia_cula4 -Xcompiler -fopenmp -lmkl_rt -lcula_lapack -lcublas -lcudart -liomp5 -L$CULA_LIB_PATH_64 -I$CULA_INC_PATH
+#nvcc driver_gpu_nvidia_cula4.c rank_revealing_algorithms_nvidia_cula.c matrix_vector_functions_nvidia_cula.c -o driver_gpu_nvidia_cula4 -Xcompiler -fopenmp -lmkl_rt -lcula_lapack -lcublas -lcudart -liomp5 -L$CULA_LIB_PATH_64 -I$CULA_INC_PATH

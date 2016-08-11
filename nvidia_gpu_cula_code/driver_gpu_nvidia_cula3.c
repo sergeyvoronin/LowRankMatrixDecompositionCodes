@@ -14,7 +14,7 @@ int main()
     mat *M, *T, *S, *C, *U, *R, *Q, *B;
     vec *Icol, *Irow;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat_6kx12k.bin";
+    char *M_file = "../../matrix_data/A_mat_6kx12k.bin";
     //char *M_file = "../data/A_mat_2kx4k.bin";
     //char *M_file = "../data/A_mat_1kx2k.bin";
     //char *M_file = "../data/A_mat_10x8.bin";

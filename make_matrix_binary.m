@@ -3,8 +3,8 @@ more off;
 
 m = 1000;
 n = 2000;
-bin_file = 'data/A_mat_1kx2k.bin'
-mat_file = 'data/A_mat_1kx2k.mat'
+bin_file = '../matrix_data/A_mat_1kx2k.bin'
+mat_file = '../matrix_data/A_mat_1kx2k.mat'
  
 
 fprintf('making matrix..\n');

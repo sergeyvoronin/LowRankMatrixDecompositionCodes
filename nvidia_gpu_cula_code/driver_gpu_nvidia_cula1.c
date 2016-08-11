@@ -9,11 +9,11 @@
 
 int main()
 {
-    int i, j, m, n, k, culaVersion;
+    int i, j, m, n, k, p, q, s, vnum, frank, culaVersion;
     double normM,normU,normS,normV,normP,percent_error;
     mat *M, *U, *S, *V, *P;
     time_t start_time, end_time;
-    char *M_file = "../data/A_mat_6kx12k.bin";
+    char *M_file = "../../matrix_data/A_mat_6kx12k.bin";
     //char *M_file = "../data/A_mat_1kx2k.bin";
     culaStatus status;
 
@@ -24,8 +24,6 @@ int main()
     culaVersion = culaGetVersion();
     printf("culaVersion is %d\n", culaVersion);
  
-
-
     printf("loading matrix from %s\n", M_file);
     M = matrix_load_from_binary_file(M_file);
     m = M->nrows;
@@ -33,17 +31,22 @@ int main()
     printf("sizes of M are %d by %d\n", m, n);
 
     // now test low rank SVD of M..
-    k = 200;
+    k = 2000;
+	p = 40;
+	q = 2;
+	s = 1;
+	vnum = 1;
     
     printf("calling random SVD..\n");
     time(&start_time);
     //randomized_low_rank_svd1(M, k, &U, &S, &V);
     //randomized_low_rank_svd2(M, k, &U, &S, &V);
     //randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
-    randomized_low_rank_svd4(M, 200, round(k/200), 2, &U, &S, &V);
+    //randomized_low_rank_svd4(M, 200, round(k/200), 2, &U, &S, &V);
     //randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
     //randomized_low_rank_svd2_autorank2(M, 500, 0.5, &U, &S, &V);
     //randomized_low_rank_svd3_autorank2(M, 500, 0.5, 5, 1, &U, &S, &V);
+	low_rank_svd_rand_decomp_fixed_rank(M, k, p, vnum, q, s, &frank, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
