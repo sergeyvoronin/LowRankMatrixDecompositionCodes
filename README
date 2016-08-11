@@ -25,8 +25,7 @@ There are three codes: for single processor (with GNU GSL), multiprocessor
 (with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
 A simple implementation in Matlab (or Octave) is also provided for 
 illustration purposes. The majority of the algorithms are currently implemented with 
-the multi-core Intel MKL version. The GPU version will soon receive updates 
-and additional routines as well.
+the multi-core Intel MKL and GPU CULA versions. 
 
 In addition, experimental Matlab mex-file support for the multi-core and 
 GPU C codes is available with illustrating examples of calling some of the 
