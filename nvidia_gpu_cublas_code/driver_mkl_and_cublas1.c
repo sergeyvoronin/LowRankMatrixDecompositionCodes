@@ -1,4 +1,4 @@
-/* NVIDIA CULA code interfaced with Intel MKL code with OpenMP 
+/* Code using NVIDIA cuBLAS for BLAS and Intel MKL for LAPACK with OpenMP on host
    driver 1: test low rank SVD routines
 */
 
@@ -35,14 +35,7 @@ int main()
     
     printf("calling random SVD..\n");
     time(&start_time);
-    //randomized_low_rank_svd1(M, k, &U, &S, &V);
-    //randomized_low_rank_svd2(M, k, &U, &S, &V);
-    //randomized_low_rank_svd3(M, k, 5, 1, &U, &S, &V);
-    //randomized_low_rank_svd4(M, 200, round(k/200), 2, &U, &S, &V);
-    //randomized_low_rank_svd2_autorank1(M, 0.5, 0.01, &U, &S, &V);
-    //randomized_low_rank_svd2_autorank2(M, 500, 0.5, &U, &S, &V);
-    //randomized_low_rank_svd3_autorank2(M, 500, 0.5, 5, 1, &U, &S, &V);
-	low_rank_svd_rand_decomp_fixed_rank(M, k, p, vnum, q, s, &frank, &U, &S, &V);
+        low_rank_svd_rand_decomp_fixed_rank(M, k, p, vnum, q, s, &frank, &U, &S, &V);
     time(&end_time);
     printf("elapsed time: about %d seconds\n", (int)difftime(end_time,start_time));
 
