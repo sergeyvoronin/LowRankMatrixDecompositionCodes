@@ -21,18 +21,24 @@ http://arxiv.org/abs/1502.05366
 http://arxiv.org/abs/1412.8447
 http://arxiv.org/abs/1503.07157
 
-There are three codes: for single processor (with GNU GSL), multiprocessor 
-(with Intel MKL) and GPU (with CULA library for NVIDIA CUDA capable cards).
+There are several codes: for single processor (with GNU GSL), multiprocessor 
+(with Intel MKL) and GPU (with the CULA library for NVIDIA CUDA capable cards 
+and with the NVIDIA cuBLAS library).
 A simple implementation in Matlab (or Octave) is also provided for 
 illustration purposes. The majority of the algorithms are currently implemented with 
-the multi-core Intel MKL and GPU CULA versions. 
+the multi-core Intel MKL and GPU CULA and cuBLAS versions. Dependencies are as follows: 
+
+multi_core_mkl_code : uses MKL for BLAS and LAPACK
+nvidia_gpu_cula_code : uses CULA for BLAS and most of LAPACK, MKL for some of LAPACK
+nvidia_gpu_cublas_code : uses cuBLAS for BLAS and MKL for LAPACK
 
 In addition, experimental Matlab mex-file support for the multi-core and 
 GPU C codes is available with illustrating examples of calling some of the 
 multi-core and GPU functions.
 
-Written by Sergey Voronin, 2014-2016 as part of a collaborative project with Per-Gunnar Martinsson.
-Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5, cula r18. Should also work 
+These codes were written by Sergey Voronin, 2014-2016 as part of a collaborative project with 
+Per-Gunnar Martinsson.
+Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5 & 7.5, cula r18. Should also work 
 with more recent version of the software. 
 
 Algorithms used based on those originally described in the article: 
@@ -51,7 +57,7 @@ https://developer.nvidia.com/cuda-zone
 http://www.culatools.com/dense/
 
 NOTE on software: The GSL library is free to download and distributed under a GNU license. A free 
-version of the CULA library is available for download at 
+version of the CULA dense library is available for download at 
 http://www.culatools.com/downloads/ , which includes all the functions 
 necessary for RSVDPACK (matrix-matrix and matrix-vector ops, QR, SVD, etc). 
 The Intel MKL library is generally available in commercial form. 

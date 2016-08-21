@@ -1,0 +1,16 @@
+Codes with Intel MKL for LAPACK and NVIDIA cuBLAS acceleration for BLAS functions
+
+
+Set up necessary paths with module load (on cluster installations)
+
+$ module load cuda/7.5.18 
+$ module load intel/2013_sp1
+
+or setup custom paths (after path adjustment) with
+
+$ source setup_paths.sh
+
+then compile with
+
+$ ./compile.sh
+
