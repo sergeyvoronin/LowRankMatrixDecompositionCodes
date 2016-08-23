@@ -5,7 +5,21 @@ bash shell:
 
 $ source setup_vars.sh
 $ ./compile_mex.sh
+
+
+newer interface:
 $ matlab -nodesktop 
+>> A = randn(5000,7000);
+>> k = 4800;
+>> p = 20;
+>> vnum = 2;
+>> q = 3;
+>> s = 1;
+>> [U,S,V] = low_rank_svd_rand_decomp_fixed_rank_cula_ifce(A,k,p,vnum,q,s);
+>> norm(A - U*S*V')/norm(A)
+
+
+interface to older routines:
 >> A = randn(2000,5000);
 >> k = 1900;
 >> [U,S,V] = rsvd_cula_mex_interface1(A,k);
@@ -17,6 +31,7 @@ $ matlab -nodesktop
 Important: setup_vars.sh must be sourced in shell from which matlab is called. 
 compile_mex.sh and setup_vars.sh must be modified to reflect system settings 
 (i.e. path to matlab, cuda/cula, etc). 
-The interface between CUDA/CULA code and matlab mex may not be stable. 
+The interface between CUDA/CULA code and matlab mex may not be stable for all Matlab versions. 
 Adjustments may be needed for different software versions. Tested 
-with Matlab R2015a, cula R18, cuda 6.5.    
+with Matlab R2015a, cula R18, cuda 7.5.    
+

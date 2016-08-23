@@ -9,6 +9,19 @@ $ ./compile_mex.sh
 then run matlab and use one of the provided interface functions:
 
 $ matlab -nodesktop 
+
+newer interface:
+>> A = randn(2000,5000);
+>> k = 1900;
+>> p = 20;
+>> vnum = 2;
+>> q = 3;
+>> s = 1;
+>> [U,S,V] = low_rank_svd_rand_decomp_fixed_rank_mkl_ifce(A,k,p,vnum,q,s);
+>> norm(A - U*S*V')/norm(A)
+
+
+interface to older routines:
 >> A = randn(2000,5000);
 >> k = 1900;
 >> [U,S,V] = rsvd_mkl_mex_interface1(A,k);
@@ -23,5 +36,6 @@ compile_mex.sh and setup_vars.sh must be modified to reflect system settings
 MKL likely needs to be warmed up prior to SVD call as done 
 in rsvd_mex_interface1.m script, otherwise a crash 
 may occur. The interface between MKL code with OpenMP and Matlab mex may  
-not be stable. Adjustments may be needed for different software versions. 
-Tested with Matlab R2015a, icc 14.0.3.    
+not be stable for all Matlab versions. Adjustments may be needed for different 
+software versions. Tested with Matlab R2015a, icc 14.0.3.    
+
