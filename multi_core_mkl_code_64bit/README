@@ -1,0 +1,7 @@
+Version for dense matrices where number of nonzeros 
+exceeds 2^32.
+
+Makes use of 
+#include <stdint.h>
+#include <inttypes.h>
+and the defined int64_t datatype.

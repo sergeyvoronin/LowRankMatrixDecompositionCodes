@@ -29,6 +29,7 @@ illustration purposes. The majority of the algorithms are currently implemented 
 the multi-core Intel MKL and GPU CULA and cuBLAS versions. Dependencies are as follows: 
 
 multi_core_mkl_code : uses MKL for BLAS and LAPACK
+multi_core_mkl_code_64bit : uses MKL for BLAS and LAPACK with 64 bit support for large matrices
 nvidia_gpu_cula_code : uses CULA for BLAS and most of LAPACK, MKL for some of LAPACK
 nvidia_gpu_cublas_code : uses cuBLAS for BLAS and MKL for LAPACK
 
@@ -36,7 +37,7 @@ In addition, experimental Matlab mex-file support for the multi-core and
 GPU C codes is available with illustrating examples of calling some of the 
 multi-core and GPU functions.
 
-These codes were written by Sergey Voronin, 2014-2016 as part of a collaborative project with 
+These codes were written by Sergey Voronin, 2014-2017 as part of a collaborative project with 
 Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5 & 7.5, cula r18. Should also work 
 with more recent version of the software. 
