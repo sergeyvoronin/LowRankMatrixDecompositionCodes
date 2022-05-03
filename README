@@ -41,6 +41,8 @@ These codes were written by Sergey Voronin, 2014-2017 as part of a collaborative
 Per-Gunnar Martinsson.
 Tested with GSL-1.16, icc/mkl 14.03, cuda 6.5 & 7.5, cula r18. Should also work 
 with more recent version of the software. 
+2022: With the release of Intel oneAPI, the code will be gradually updated to new standard for 64 bit operations.
+
 
 Algorithms used based on those originally described in the article: 
 "Finding structure with randomness: Probabilistic algorithms for constructing approximate matrix decompositions," N. Halko, P.G. Martinsson, J. Tropp, SIAM Review, 53(2), 2011
