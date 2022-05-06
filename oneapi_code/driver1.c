@@ -14,8 +14,9 @@ int main()
     //int i, j, m, n, k, p, q, s, vnum, offset;
     myint64 i, j, m, n, k, p, q, s, vnum, offset;
     myint64 frank, numnnz;
-    double val,normM,normU,normS,normV,normP,percent_error;
-    mat *M, *U, *S, *V, *P;
+    float val,normM,normU,normS,normV,normP,percent_error;
+    mat *M, *D, *MD, *MDMT, *U, *S, *V, *P;
+    vec *svals;
     double start_time, end_time;
 
     m = 25000;
@@ -29,17 +30,38 @@ int main()
     printf("m*n = %" PRId64 "\n", numnnz); // this is bigger than a 32 bit int can hold
 
     printf("initializing random matrix..\n");
-    start_time = dsecnd();
-    printf("start time = %f\n", start_time);
     printf("--- calling initialize random matrix ---\n");
+    start_time = dsecnd();
     initialize_random_matrix(M);
-
     end_time = dsecnd();
     printf("--- done with initialization ---\n");
     printf("elapsed time: about %4.2f seconds\n", get_seconds_frac(start_time,end_time));
 
 
+    printf("compute MDM^T (mirror QDQ^T) --\n");
+    //can call QR_factorization_getQ(M,Q);
+    start_time = dsecnd();
+    D = matrix_new(n,n);
+    svals = vector_new(n);
+    printf("set svals to decay\n");
+    vector_set_element(svals,0,1.0);
+    for(i=1; i<n; i++){
+        vector_set_element(svals,i, vector_get_element(svals,i-1)/1.02);
+    }
+    initialize_diagonal_matrix(D, svals);
+    MD = matrix_new(m,n);
+    MDMT = matrix_new(m,m);
+    printf("compute MD\n");
+    matrix_matrix_mult(M,D,MD);
+    printf("compute MDMT\n");
+    matrix_matrix_transpose_mult(MD,M,MDMT);
+    matrix_delete(M);
+    matrix_delete(MD);
+    end_time = dsecnd();
+    printf("elapsed time: about %4.2f seconds\n", get_seconds_frac(start_time,end_time));
+
     // now test low rank SVD of M..
+    printf("computing approximate low rank SVD\n");
     k = 1000; // rank we want
     p = 20; // oversampling
     q = 3; // power scheme
@@ -48,7 +70,7 @@ int main()
 
     printf("calling random SVD..\n");
     start_time = dsecnd();
-	low_rank_svd_rand_decomp_fixed_rank(M, k, p, vnum, q, s, &frank, &U, &S, &V);
+	low_rank_svd_rand_decomp_fixed_rank(MDMT, k, p, vnum, q, s, &frank, &U, &S, &V);
     end_time = dsecnd();
     printf("elapsed time: about %4.2f seconds\n", get_seconds_frac(start_time,end_time));
 
@@ -57,7 +79,7 @@ int main()
     form_svd_product_matrix(U,S,V,P);
 
     // get norms of each
-    normM = get_matrix_frobenius_norm(M);
+    normM = get_matrix_frobenius_norm(MDMT);
     normU = get_matrix_frobenius_norm(U);
     normS = get_matrix_frobenius_norm(S);
     normV = get_matrix_frobenius_norm(V);
@@ -65,12 +87,12 @@ int main()
     printf("normM = %f ; normU = %f ; normS = %f ; normV = %f ; normP = %f\n", normM, normU, normS, normV, normP);
 
     // calculate percent error
-    percent_error = get_percent_error_between_two_mats(M,P);
-    printf("percent_error between M and U S V^T = %f\n", percent_error);
+    percent_error = get_percent_error_between_two_mats(MDMT,P);
+    printf("percent_error between MDMT and U S V^T = %f\n", percent_error);
 
     // delete and exit
     printf("delete and exit..\n");
-    matrix_delete(M);
+    matrix_delete(MDMT);
     matrix_delete(U);
     matrix_delete(S);
     matrix_delete(V);
