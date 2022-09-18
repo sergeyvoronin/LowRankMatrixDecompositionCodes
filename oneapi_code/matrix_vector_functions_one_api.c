@@ -1,6 +1,6 @@
-/* high level matrix/vector functions using Intel MKL for blas */
+/* high level matrix/vector functions using Intel oneAPI MKL for blas/lapack */
 /* Sergey Voronin */
-#include "matrix_vector_functions_intel_mkl.h"
+#include "matrix_vector_functions_one_api.h"
 
 /* initialize new matrix and set all entries to zero */
 mat * matrix_new(myint64 nrows, myint64 ncols)
@@ -78,7 +78,7 @@ mat * matrix_load_from_binary_file(char *fname){
     fp = fopen(fname,"r");
     fread(&num_rows,sizeof(myint64),one,fp); //read m
     fread(&num_columns,sizeof(myint64),one,fp); //read n
-    printf("initializing M of size %d by %d\n", num_rows, num_columns);
+    printf("initializing M of size %ld by %ld\n", num_rows, num_columns);
     M = matrix_new(num_rows,num_columns);
     printf("done..\n");
 
@@ -239,10 +239,14 @@ void matrix_hard_threshold(mat *M, float TOL){
 /* build transpose of matrix : Mt = M^T */
 void matrix_build_transpose(mat *Mt, mat *M){
     myint64 i,j;
+    #pragma omp parallel shared(M) private(i) 
+    {
+    #pragma omp for 
     for(i=0; i<(M->nrows); i++){
         for(j=0; j<(M->ncols); j++){
             matrix_set_element(Mt,j,i,matrix_get_element(M,i,j)); 
         }
+    }
     }
 }
 
@@ -470,7 +474,7 @@ void initialize_random_matrix(mat *M){
     #pragma omp parallel for shared(M,r) private(i) 
     for(i=0; i<N; i++){
         /*if(i%1000000 == 0){
-            printf("at i=%d\n", i);
+            printf("at i=%ld\n", i);
         }*/
         M->d[i] = r[i];
     }
@@ -1038,7 +1042,7 @@ void fill_matrix_from_lower_right_corner(mat *M, myint64 k, mat *M_out){
         for(j=k; j<M->ncols; j++){
             i_out = i-k;
             j_out = j-k;
-            //printf("setting element %d, %d of M_out\n", i_out, j_out);
+            //printf("setting element %ld, %ld of M_out\n", i_out, j_out);
             matrix_set_element(M_out,i_out,j_out,matrix_get_element(M,i,j));
         }
     }
@@ -1176,6 +1180,7 @@ void vector_build_rewrapped(vec *Iinv, vec *I){
 void compute_evals_and_evecs_of_symm_matrix(mat *S, vec *evals){
     //LAPACKE_dsyev( LAPACK_ROW_MAJOR, 'V', 'U', S->nrows, S->d, S->nrows, evals->d);
     LAPACKE_ssyev( LAPACK_COL_MAJOR, 'V', 'U', S->nrows, S->d, S->ncols, evals->d);
+    //LAPACKE_dsyev( LAPACK_COL_MAJOR, 'V', 'U', S->nrows, S->d, S->ncols, evals->d);
 }
 
 
@@ -1185,7 +1190,7 @@ void compact_QR_factorization(mat *M, mat *Q, mat *R){
     myint64 i,j,m,n,k;
     m = M->nrows; n = M->ncols;
     k = min(m,n);
-    printf("doing QR with m = %d, n = %d, k = %d\n", m,n,k);
+    printf("doing QR with m = %ld, n = %ld, k = %ld\n", m,n,k);
     mat *R_full = matrix_new(m,n);
     matrix_copy(R_full,M);
     //vec *tau = vector_new(n);
@@ -1311,7 +1316,7 @@ void estimate_rank_and_buildQ(mat *M, float frac_of_max_rank, float TOL, mat **Q
     initialize_random_matrix(RN);
 
     // multiply to get matrix of random samples Y
-    printf("form Y: %d x %d..\n",m,maxdim);
+    printf("form Y: %ld x %ld..\n",m,maxdim);
     Y = matrix_new(m, maxdim);
     matrix_matrix_mult(M, RN, Y);
 
@@ -1342,7 +1347,7 @@ void estimate_rank_and_buildQ(mat *M, float frac_of_max_rank, float TOL, mat **Q
         matrix_set_col(Qbig, j, vj);
     }
 
-    printf("estimated rank = %d\n", *good_rank);
+    printf("estimated rank = %ld\n", *good_rank);
     Qsmall = matrix_new(m, *good_rank);
     *Q = matrix_new(m, *good_rank);
     matrix_copy_first_columns(Qsmall, Qbig);
@@ -1370,7 +1375,7 @@ void estimate_rank_and_buildQ2(mat *M, myint64 kblock, float TOL, mat **Y, mat *
     initialize_random_matrix(RN);
 
     // multiply to get matrix of random samples Y
-    printf("form Y: %d x %d..\n",m,kblock);
+    printf("form Y: %ld x %ld..\n",m,kblock);
     *Y = matrix_new(m, kblock);
     matrix_matrix_mult(M, RN, *Y);
 
@@ -1393,7 +1398,7 @@ void estimate_rank_and_buildQ2(mat *M, myint64 kblock, float TOL, mat **Y, mat *
 
         error_norm = 0.01*get_percent_error_between_two_mats(QQtM, M);
 
-        printf("Y is of size %d x %d and error_norm = %f\n", (*Y)->nrows, (*Y)->ncols, error_norm);
+        printf("Y is of size %ld x %ld and error_norm = %f\n", (*Y)->nrows, (*Y)->ncols, error_norm);
         *good_rank = (*Y)->ncols;
        
         // add more samples if needed
@@ -1435,9 +1440,9 @@ void upper_triangular_system_solve(mat *A, mat *B, mat *X, myint64 solve_type){
     vec *col_vec;
     mat *S;
 
-    //printf("A is %d by %d\n", A->nrows, A->ncols);
-    //printf("X is %d by %d\n", X->nrows, X->ncols);
-    //printf("B is %d by %d\n", B->nrows, B->ncols);
+    //printf("A is %ld by %ld\n", A->nrows, A->ncols);
+    //printf("X is %ld by %ld\n", X->nrows, X->ncols);
+    //printf("B is %ld by %ld\n", B->nrows, B->ncols);
 
     if(solve_type == 1){
         S = matrix_new(B->nrows,B->ncols);

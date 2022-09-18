@@ -38,8 +38,8 @@ mat * matrix_new(myint64 nrows, myint64 ncols);
 /* initialize new vector and set all entries to zero */
 vec * vector_new(myint64 nrows);
 
+/* free space */
 void matrix_delete(mat *M);
-
 void vector_delete(vec *v);
 
 
@@ -366,3 +366,4 @@ void square_matrix_system_solve(mat *A, mat *X, mat *B);
 //float get_seconds_frac(struct timeval start_timeval, struct timeval end_timeval);
 float get_seconds_frac(float start_timeval, float end_timeval);
 
+double omp_get_wtime(void);

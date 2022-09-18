@@ -1,7 +1,7 @@
-/* matrix decomposition algorithms */
+/* matrix decomposition algorithms with Intel oneAPI */
 /* Sergey Voronin */
 
-#include "rank_revealing_algorithms_intel_mkl.h"
+#include "rank_revealing_algorithms_one_api.h"
 
 /* computes the low rank SVD of rank k or tolerance TOL of matrix M  */
 void low_rank_svd_decomp_fixed_rank_or_prec(mat *M, myint64 k, double TOL, myint64 *frank, mat **U, mat **S, mat **V){
@@ -101,7 +101,7 @@ void low_rank_svd_rand_decomp_fixed_rank(mat *M, myint64 k, myint64 p, myint64 v
     Yorth = matrix_new(m,l);
     Zorth = matrix_new(n,l);
     for(j=1; j<q; j++){
-        printf("M M^T mult j=%d of %d\n", j, q-1);
+        printf("M M^T mult j=%ld of %ld\n", j, q-1);
 
         if((2*j-2) % s == 0){
             //printf("orthogonalize Y..\n");
@@ -224,7 +224,7 @@ void low_rank_svd_rand_decomp_fixed_rank(mat *M, myint64 k, myint64 p, myint64 v
         matrix_delete(UhatSinv);
 
         // resize matrices to rank k from end
-        printf("resize mats to rank %d from end\n",k);
+        printf("resize mats to rank %ld from end\n",k);
         resize_matrix_by_columns_from_end(U,k);
         resize_matrix_by_columns_from_end(V,k);
         resize_matrix_by_columns_from_end(S,k);
@@ -237,6 +237,226 @@ void low_rank_svd_rand_decomp_fixed_rank(mat *M, myint64 k, myint64 p, myint64 v
     //matrix_delete(Z);
     //matrix_delete(Yorth);
     //matrix_delete(Zorth);
+}
+
+
+/* use Q,B outputs to construct low rank SVD */
+void low_rank_svd_rand_decomp_fromQB(mat **Q, mat **B, mat **U, mat **S, mat **V){
+    myint64 i,m,n,knew; 
+    mat *BBt, *Uhat, *St, *Vt, *Sinv, *UhatSinv;
+    vec *singvals;
+    m = (*Q)->nrows; n = (*B)->ncols;
+    knew =(*Q)->ncols;
+    //printf("m = %ld, n = %ld, knew = %ld\n", m, n, knew);
+
+    // setup mats
+    *U = matrix_new(m,knew);
+    *S = matrix_new(knew,knew);
+    *V = matrix_new(n,knew);
+    Uhat = matrix_new(knew,knew);
+    St = matrix_new(knew,knew);
+    Vt = matrix_new(knew,n);
+
+    BBt = matrix_new(knew,knew);
+    matrix_matrix_transpose_mult(*B,*B,BBt); 
+
+    // compute eigendecomposition of BBt
+    //printf("norm(BBt) = %f\n", get_matrix_frobenius_norm(BBt));
+
+    // SVD on small symmetric matrix (replace with eigendecomp)
+    singular_value_decomposition(BBt, Uhat, St, Vt);
+    /*printf("norm(BBt) = %f\n", get_matrix_frobenius_norm(BBt));
+    printf("norm(Uhat) = %f\n", get_matrix_frobenius_norm(Uhat));
+    printf("norm(St) = %f\n", get_matrix_frobenius_norm(St));
+    printf("norm(Vt) = %f\n", get_matrix_frobenius_norm(Vt));*/
+
+    //printf("form S..\n");
+    singvals = vector_new(knew);
+    for(i=0; i<knew; i++){
+        //printf("sing[%ld] = %f\n", i, sqrt(matrix_get_element(St,i,i)));
+        vector_set_element(singvals,i,sqrt(matrix_get_element(St,i,i)));
+    }
+    initialize_diagonal_matrix(*S, singvals);
+    printf("norm(S) = %f\n", get_matrix_frobenius_norm(*S));
+
+    // compute U = Q*Uhat mxk * kxk (mxk)  
+    //printf("form U..\n");
+    matrix_matrix_mult(*Q,Uhat,*U);
+    //printf("norm(U) = %f\n", get_matrix_frobenius_norm(*U));
+
+    // compute V = B^T Uhat * Sigma^{-1} (nxk)
+    //printf("form V..\n");
+    Sinv = matrix_new(knew,knew);
+    UhatSinv = matrix_new(knew,knew);
+    invert_diagonal_matrix(Sinv,*S);
+    matrix_matrix_mult(Uhat,Sinv,UhatSinv);
+    matrix_transpose_matrix_mult(*B,UhatSinv,*V);
+    //printf("norm(V) = %f\n", get_matrix_frobenius_norm(*V));
+
+    // clean up
+    printf("clean up..\n");
+    matrix_delete(BBt);
+    matrix_delete(Vt);
+    //matrix_delete(*Q);
+    //matrix_delete(*B);
+    matrix_delete(Uhat);
+    matrix_delete(Sinv);
+    matrix_delete(UhatSinv);
+    vector_delete(singvals);
+}
+
+
+/* randQB blocked algorithm with power method 
+inputs: matrix M, integer kstep (block size), integer nstep (number of blocks), power scheme parameter p [ integer (>=0) ], orthogonalization amount in power scheme parameter s
+outputs: matrices Q and B s.t. M \approx Q*B 
+*/
+void randQB_pb(mat *M, myint64 kstep, myint64 nstep, myint64 p, myint64 s, mat **Q, mat **B){
+    myint64 i,j,m,n,l,step;
+    double dotp,elapsed_time;
+    myint64 *inds_local, *inds_global;
+    mat *A, *RN, *RNp, *Yp, *Qp, *Bp, *AtQp, *AtQp2, *QpBp, *Qj, *QjtQp, *QjQjtQp;
+    vec *ej,*rj,*pj,*qj,*qi,*yj,*bj;
+    double start_t, end_t;
+
+    m = M->nrows; n = M->ncols;
+    // check to make sure kstep is not too large
+    if(kstep > (int64_t) (min(m,n)/2)){
+        kstep = (int64_t)min(m,n)/10;
+        printf("kstep resized to %ld\n", kstep);
+    }
+    l = kstep*nstep;
+
+    // build random matrix
+    printf("form RN..\n");
+    RN = matrix_new(n, l);
+    initialize_random_matrix(RN);
+
+    // set up mats
+    A = matrix_new(m,n);
+    *Q = matrix_new(m,l);
+    *B = matrix_new(l,n);
+    RNp = matrix_new(n,kstep); 
+    Yp = matrix_new(m,kstep);
+    Qp = matrix_new(m,kstep);
+    Bp = matrix_new(kstep,n);
+    QpBp = matrix_new(m,n);
+    AtQp = matrix_new(n,kstep);
+    AtQp2 = matrix_new(n,kstep);
+
+
+    // copy M to A
+    matrix_copy(A,M);
+
+    for(step=0; step<nstep; step++){
+        printf("in block step %ld\n", step);
+        
+        start_t = omp_get_wtime(); 
+        inds_local = (int64_t*)malloc(kstep*sizeof(int64_t));
+        for(i=0; i<kstep; i++){
+            inds_local[i] = kstep*step + i;
+        } 
+        matrix_get_selected_columns(RN, inds_local, RNp);
+        matrix_matrix_mult(A,RNp,Yp);
+        end_t = omp_get_wtime(); 
+        elapsed_time = end_t - start_t;
+        //printf("elapsed time for building Yp: %4.8f sec\n", elapsed_time);
+
+
+        // power method
+        start_t = omp_get_wtime(); 
+        for(j=1; j<=p; j++){
+            if((2*j-2) % s == 0){
+                QR_factorization_getQ(Yp, Qp);
+                matrix_transpose_matrix_mult(A,Qp,AtQp);
+            }
+            else{
+                matrix_transpose_matrix_mult(A,Yp,AtQp);
+            }
+
+            if((2*j-1) % s == 0){
+                QR_factorization_getQ(AtQp, AtQp2);
+                matrix_matrix_mult(A,AtQp2,Yp);
+            }
+            else{
+                matrix_matrix_mult(A,AtQp,Yp);
+            }
+        }
+
+        // Qp = qr(Yp,0) 
+        QR_factorization_getQ(Yp, Qp);
+        end_t = omp_get_wtime(); 
+        elapsed_time = end_t - start_t;
+        //printf("elapsed time power method: %4.8f sec\n", elapsed_time);
+
+
+        // project Qp away from previous Q stuff
+        if(step>0){
+            start_t = omp_get_wtime(); 
+            inds_global = (int64_t*)malloc(step*kstep*sizeof(int64_t));
+            Qj = matrix_new(m,step*kstep);
+            QjtQp = matrix_new(step*kstep,kstep);
+            QjQjtQp = matrix_new(m,kstep);
+
+            for(i=0; i<(step*kstep); i++){
+                inds_global[i] = i;
+            }
+            matrix_get_selected_columns(*Q, inds_global, Qj);
+
+            // Yp = Qp - Q(:,J)*(Q(:,J)'*Qp);
+            matrix_transpose_matrix_mult(Qj,Qp,QjtQp);
+            matrix_matrix_mult(Qj,QjtQp,QjQjtQp);
+            matrix_copy(Yp,Qp);
+            matrix_sub(Yp,QjQjtQp);
+
+            // Qp = qr(Yp,0);
+            QR_factorization_getQ(Yp, Qp);
+
+            end_t = omp_get_wtime(); 
+            elapsed_time = end_t - start_t;
+            //printf("elapsed time for reorthogonalization: %4.8f sec\n", elapsed_time);
+
+            free(QjQjtQp);
+            free(QjtQp);
+            free(Qj);
+            free(inds_global);
+        }
+
+        // Bp = Qp'*A
+        start_t = omp_get_wtime(); 
+        matrix_transpose_matrix_mult(Qp,A,Bp);
+        end_t = omp_get_wtime(); 
+        elapsed_time = end_t - start_t;
+        //printf("elapsed time for forming Bp: %4.8f sec\n", elapsed_time);
+
+
+        // A = A - Qp*Bp
+        start_t = omp_get_wtime(); 
+        matrix_matrix_mult(Qp,Bp,QpBp);
+        matrix_sub(A,QpBp); 
+        end_t = omp_get_wtime(); 
+        elapsed_time = end_t - start_t;
+        //printf("elapsed time for updating A: %4.8f sec\n", elapsed_time);
+
+        // Q(:,ind) = Qp; B(ind,:) = Bp;
+        start_t = omp_get_wtime(); 
+        matrix_set_selected_columns(*Q, inds_local, Qp);
+        matrix_set_selected_rows(*B, inds_local, Bp);
+        end_t = omp_get_wtime(); 
+        elapsed_time = end_t - start_t;
+        //printf("elapsed time for updating Q and B: %4.8f sec\n", elapsed_time);
+        
+        free(inds_local);
+    }
+
+    // clean up
+    matrix_delete(A);
+    matrix_delete(RNp); 
+    matrix_delete(Yp);
+    matrix_delete(Qp);
+    matrix_delete(Bp);
+    matrix_delete(QpBp);
+    matrix_delete(AtQp);
+    matrix_delete(AtQp2);
 }
 
 
@@ -377,5 +597,19 @@ void use_pivoted_QR_decomp_for_approximation(mat *M, mat *Qk, mat *Rk, vec *I){
     matrix_delete(Qk); matrix_delete(Rk);
     matrix_delete(QkRk); matrix_delete(QkRkPt);
     matrix_delete(Porig); matrix_delete(P);
+}
+
+
+/* evaluate approximation to M using supplied QB decomposition */
+void use_QB_decomp_for_approximation(mat *M, mat *Q, mat *B){
+    mat *P;
+    P = matrix_new(M->nrows, M->ncols);
+    matrix_matrix_mult(Q, B, P);
+
+    printf("norm(M,fro) = %f\n", get_matrix_frobenius_norm(M));
+    printf("norm(P,fro) = %f\n", get_matrix_frobenius_norm(P));
+    printf("percent error = %f\n", get_percent_error_between_two_mats(M,P));
+
+    matrix_delete(P);
 }
 
