@@ -11,6 +11,7 @@
 
 int main()
 {
+    //int i, j, m, n, k, p, q, s, vnum, offset;
     myint64 i, j, m, n, k, p, q, s, vnum, offset;
     myint64 frank, numnnz;
     float val,normM,normU,normS,normV,normP,percent_error;
@@ -18,8 +19,8 @@ int main()
     vec *svals;
     double start_time, end_time;
 
-    m = 25000;
-    n = 30000;
+    m = 20000;
+    n = 25000;
     numnnz = m*n; // dense
 
     M = matrix_new(m,n);

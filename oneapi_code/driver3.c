@@ -1,5 +1,5 @@
 /*  
-   driver 2: test block random QB routine and subsequent low rank SVD
+   driver 3: test ID and randomized QB decomp in TOL mode 
 */
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
@@ -13,15 +13,15 @@
 
 int main()
 {
-    myint64 i, j, m, n, kstep, nstep, p, q, s, vnum, offset;
+    myint64 i, j, k, m, n, kstep, nstep, p, q, s, vnum, offset;
     myint64 frank, numnnz;
-    float val,normM,normU,normS,normV,normP,percent_error;
-    mat *M, *D, *MD, *MDMT, *Q, *B, *U, *S, *V;
-    vec *svals;
+    float val,normM,normU,normS,normV,normP,TOL,percent_error;
+    mat *M, *D, *MD, *MDMT, *Q, *B, *T;
+    vec *svals, *Icol;
     double start_time, end_time;
 
-    m = 15000;
-    n = 20000;
+    m = 5000;
+    n = 1000;
     numnnz = m*n; // dense
 
     M = matrix_new(m,n);
@@ -61,50 +61,51 @@ int main()
     end_time = omp_get_wtime();;
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
-    // params for QB, determining SVD..
-    printf("computing approximate low rank SVD via QB\n");
-    kstep = 100; // size of each block
-    nstep = 10; // nsteps
-    p = 2; // power scheme
-    s = 1; // re-rotho for power scheme    
-    vnum = 1; // scheme to use
+    // call ID
+    k = 1000; // rank
+    p = 20; // oversampling
+    q = 1; // power scheme power
+    s = 2; // power scheme orthogonalization amount
 
-    printf("calling random QB..\n");
+    printf("computing approximate rank %ld ID..\n", k);
     start_time = omp_get_wtime();
-    randQB_pb(MDMT, kstep, nstep, p, s, &Q, &B);
+    id_rand_decomp_fixed_rank(MDMT, k, p, q, s, &Icol, &T);
+    end_time = omp_get_wtime();
+    printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
+    printf("normT = %f\n", get_matrix_frobenius_norm(T));
+
+    printf("check ID approximation:\n");
+    start_time = omp_get_wtime();
+    use_id_decomp_for_approximation(MDMT, T, Icol, k);
     end_time = omp_get_wtime();
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
-    printf("evaluating approximation\n");
-    start_time = omp_get_wtime();
+	printf("call QB decomp in TOL mode..\n");
+	kstep = 200;
+    nstep = -1; // ceil((k+p)/kstep);
+	TOL = 1e-2;
+    randQB_pb2(MDMT, kstep, nstep, TOL, q, s, &frank, &Q, &B);
+	printf("output frank = %ld\n", frank);
+	printf("norm(Q) = %f, norm(B) = %f\n", get_matrix_frobenius_norm(Q), get_matrix_frobenius_norm(B));
     use_QB_decomp_for_approximation(MDMT, Q, B);
-    end_time = omp_get_wtime();
-    printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
-    printf("using QB for SVD..\n");
+	printf("use QB outputs to construct ID..\n");
     start_time = omp_get_wtime();
-    low_rank_svd_rand_decomp_fromQB(Q, B, &U, &S, &V);
-    use_low_rank_svd_for_approximation(MDMT, U, S, V);
+	id_rand_decomp_fromQB(Q, B, &Icol, &T);
+    printf("normT = %f\n", get_matrix_frobenius_norm(T));
+    printf("normIcol = %f\n", vector_get2norm(Icol));
+	printf("check ID approximation:\n");
+    use_id_decomp_for_approximation(MDMT, T, Icol, frank);
     end_time = omp_get_wtime();
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
-    printf("evaluating approximation\n");
-    matrix_delete(Q);
-    matrix_delete(B);
-    normM = get_matrix_frobenius_norm(MDMT);
-    normU = get_matrix_frobenius_norm(U);
-    normS = get_matrix_frobenius_norm(S);
-    normV = get_matrix_frobenius_norm(V);
-    printf("normM = %f ; normU = %f ; normS = %f ; normV = %f\n", normM, normU, normS, normV);
-
-    use_low_rank_svd_for_approximation(MDMT, U, S, V);
-
-    // delete and exit
     printf("delete and exit..\n");
     matrix_delete(MDMT);
-    matrix_delete(U);
-    matrix_delete(S);
-    matrix_delete(V);
-
+    matrix_delete(Q);
+    matrix_delete(B);
+    matrix_delete(T);
+    vector_delete(Icol);
+ 
     return 0;
 }
+
