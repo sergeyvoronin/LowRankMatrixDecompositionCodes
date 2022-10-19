@@ -457,20 +457,20 @@ void initialize_random_matrix(mat *M){
     float a=0.0,sigma=1.0;
     m = M->nrows;
     n = M->ncols;
-    //printf("compute N, setting stream and r..\n");
+    printf("compute N, setting stream and r..\n");
     N = m*n;
     float *r;
     VSLStreamStatePtr stream;
     
     r = (float*)mkl_calloc(N,sizeof(float),64);
    
-    //printf("generating random numbers..\n");
+    printf("generating random numbers..\n");
     vslNewStream( &stream, BRNG,  time(NULL) );
     //vslNewStream( &stream, BRNG,  SEED );
     vsRngGaussian( METHOD, stream, N, r, a, sigma );
 
     // read and set elements
-    //printf("filling matrix..\n");
+    printf("filling matrix..\n");
     #pragma omp parallel for shared(M,r) private(i) 
     for(i=0; i<N; i++){
         /*if(i%1000000 == 0){
@@ -479,6 +479,7 @@ void initialize_random_matrix(mat *M){
         M->d[i] = r[i];
     }
     
+    printf("freeing r..\n");
     mkl_free(r);
 }
 

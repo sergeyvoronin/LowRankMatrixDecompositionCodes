@@ -1,5 +1,5 @@
 /*  
-   driver 2: test block random QB routine and subsequent low rank SVD
+   driver 2: test block random QB routine and subsequent low rank SVD 
 */
 
 #define min(x,y) (((x) < (y)) ? (x) : (y))
@@ -13,15 +13,15 @@
 
 int main()
 {
-    myint64 i, j, m, n, kstep, nstep, p, q, s, vnum, offset;
+    myint64 i, j, m, n, kstep, nstep, p, q, s, offset;
     myint64 frank, numnnz;
     float val,normM,normU,normS,normV,normP,percent_error;
     mat *M, *D, *MD, *MDMT, *Q, *B, *U, *S, *V;
     vec *svals;
     double start_time, end_time;
 
-    m = 10000;
-    n = 15000;
+    m = 8*1500;
+    n = 8*2000;
     numnnz = m*n; // dense
 
     M = matrix_new(m,n);
@@ -63,11 +63,10 @@ int main()
 
     // params for QB, determining SVD..
     printf("computing approximate low rank SVD via QB\n");
-    kstep = 100; // size of each block
-    nstep = 10; // nsteps
+    kstep = 100; // block size 
+    nstep = 10; // num steps
     p = 2; // power scheme
     s = 1; // re-rotho for power scheme    
-    vnum = 1; // scheme to use
 
     printf("calling random QB..\n");
     start_time = omp_get_wtime();
@@ -83,8 +82,7 @@ int main()
 
     printf("using QB for SVD..\n");
     start_time = omp_get_wtime();
-    low_rank_svd_rand_decomp_fromQB(Q, B, &U, &S, &V);
-    use_low_rank_svd_for_approximation(MDMT, U, S, V);
+    low_rank_svd_rand_decomp_fromQB(&Q, &B, &U, &S, &V);
     end_time = omp_get_wtime();
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
