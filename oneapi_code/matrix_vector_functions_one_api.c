@@ -452,34 +452,43 @@ void compute_matrix_column_norms(mat *M, vec *column_norms){
 
 /* initialize a random matrix */
 void initialize_random_matrix(mat *M){
-    myint64 i,m,n,N;
+    myint64 i,ig,j,m,n,N,nb;
     float val;
     float a=0.0,sigma=1.0;
     m = M->nrows;
     n = M->ncols;
-    //printf("compute N, setting stream and r..\n");
     N = m*n;
     float *r;
     VSLStreamStatePtr stream;
-    
-    r = (float*)mkl_calloc(N,sizeof(float),64);
    
-    //printf("generating random numbers..\n");
     vslNewStream( &stream, BRNG,  time(NULL) );
-    //vslNewStream( &stream, BRNG,  SEED );
-    vsRngGaussian( METHOD, stream, N, r, a, sigma );
-
-    // read and set elements
-    //printf("filling matrix..\n");
-    #pragma omp parallel for shared(M,r) private(i) 
-    for(i=0; i<N; i++){
-        /*if(i%1000000 == 0){
-            printf("at i=%ld\n", i);
-        }*/
-        M->d[i] = r[i];
+    if(N < 1e8){
+        r = (float*)mkl_calloc(N,sizeof(float),64);
+        vsRngGaussian( METHOD, stream, N, r, a, sigma );
+        #pragma omp parallel for shared(M,r) private(i) 
+        for(i=0; i<N; i++){
+            M->d[i] = r[i];
+        }
     }
-    
-    mkl_free(r);
+    else{ // generate random numbers in chunks for large sizes
+        nb = N/1e8 + 1;  
+        ig = 0;
+        r = (float*)mkl_calloc(1e8,sizeof(float),64);
+        for(j=0; j<nb; j++){
+            vsRngGaussian( METHOD, stream, 1e8, r, a, sigma );
+            #pragma omp parallel for shared(M,r,ig) private(i) 
+            for(i=0; i<1e8; i++){
+                if(ig >= N){ break; } else if (ig < N){
+                    M->d[ig] = r[i]; 
+                    #pragma omp atomic update
+                    ig++;
+                }
+            } 
+        }
+        //printf("on rand func exit: N = %ld, nb = %ld, ig = %ld, \n", N, nb, ig);
+    }
+
+    mkl_free(r); r = NULL;
 }
 
 

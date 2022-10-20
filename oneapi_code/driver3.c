@@ -20,8 +20,8 @@ int main()
     vec *svals, *Icol;
     double start_time, end_time;
 
-    m = 5000;
-    n = 1000;
+    m = 8000;
+    n = 12000;
     numnnz = m*n; // dense
 
     M = matrix_new(m,n);
@@ -80,21 +80,21 @@ int main()
     end_time = omp_get_wtime();
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
 
-	printf("call QB decomp in TOL mode..\n");
-	kstep = 200;
+    printf("call QB decomp in TOL mode..\n");
+    kstep = 200;
     nstep = -1; // ceil((k+p)/kstep);
-	TOL = 1e-2;
+    TOL = 1e-2;
     randQB_pb2(MDMT, kstep, nstep, TOL, q, s, &frank, &Q, &B);
-	printf("output frank = %ld\n", frank);
-	printf("norm(Q) = %f, norm(B) = %f\n", get_matrix_frobenius_norm(Q), get_matrix_frobenius_norm(B));
+    printf("output frank = %ld\n", frank);
+    printf("norm(Q) = %f, norm(B) = %f\n", get_matrix_frobenius_norm(Q), get_matrix_frobenius_norm(B));
     use_QB_decomp_for_approximation(MDMT, Q, B);
 
-	printf("use QB outputs to construct ID..\n");
+    printf("use QB outputs to construct ID..\n");
     start_time = omp_get_wtime();
-	id_rand_decomp_fromQB(Q, B, &Icol, &T);
+    id_rand_decomp_fromQB(Q, B, &Icol, &T);
     printf("normT = %f\n", get_matrix_frobenius_norm(T));
     printf("normIcol = %f\n", vector_get2norm(Icol));
-	printf("check ID approximation:\n");
+    printf("check ID approximation:\n");
     use_id_decomp_for_approximation(MDMT, T, Icol, frank);
     end_time = omp_get_wtime();
     printf("elapsed time: about %4.2f seconds\n", end_time - start_time);
@@ -108,4 +108,3 @@ int main()
  
     return 0;
 }
-
